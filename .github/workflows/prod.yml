@@ -1,0 +1,24 @@
+name: NestJS Deployment
+
+on:
+  push:
+    branches: [prod]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy using ssh
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.PASSWORD }}
+          port: 22
+          script: |
+            cd /var/www/html/ta-api/
+            git fetch origin
+            git checkout prod
+            remote_repo="https://x-access-token:${{ secrets.ACCESS_TOKEN }}@github.com/phbao27uet/ta-api.git"
+            git pull "$remote_repo" prod
+            docker compose up -d --build

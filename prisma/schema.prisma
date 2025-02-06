@@ -1,0 +1,71 @@
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id          String       @id @default(auto()) @map("_id") @db.ObjectId
+  email       String       @unique
+  password    String
+  role        Role
+  images      String[]
+  shortVideo  String
+  name        String?
+  age         Int?
+  gender      String?
+  location    Json? // GeoJSON format for geospatial queries
+  rawProfile  String? // Raw text input by user
+  interests   String[]
+  education   String?
+  job         String?
+  embeddings  Float[] // Vector embeddings for semantic search
+  matchIDs    String[]     @db.ObjectId
+  matches     Match[]      @relation(fields: [matchIDs], references: [id])
+  preferences Preference[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  swipers     Swipe[] @relation("swiper")
+  targetUsers Swipe[] @relation("targetUser")
+}
+
+model Swipe {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  swiper       User      @relation("swiper", fields: [swiperId], references: [id])
+  swiperId     String    @db.ObjectId
+  targetUser   User      @relation("targetUser", fields: [targetUserId], references: [id])
+  targetUserId String    @db.ObjectId
+  direction    Direction
+  createdAt    DateTime  @default(now())
+}
+
+model Match {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  userIDs        String[] @db.ObjectId
+  users          User[]   @relation(fields: [userIDs], references: [id])
+  matchedAt      DateTime @default(now())
+  stabilityScore Float? // Score from Gale-Shapley algorithm
+}
+
+model Preference {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String   @db.ObjectId
+  preferredOrder Int[]
+  lastUpdated    DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id])
+}
+
+enum Direction {
+  LEFT
+  RIGHT
+  UP
+}
+
+enum Role {
+  USER
+  ADMIN
+}

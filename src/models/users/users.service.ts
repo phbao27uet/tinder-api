@@ -1,0 +1,152 @@
+import { DefaultFindAllQueryDto } from '@models/base/dto';
+import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { PrismaService } from 'src/shared/prisma/prisma.service';
+import { ChangePasswordDto, UpdateUserDto } from './dto/update-user.dto';
+import { hashPassword, PREFIX_USER } from '@shared/utils';
+
+@Injectable()
+export class UserService {
+  constructor(private prisma: PrismaService) {}
+
+  async findAll(defaultFindAllQuery: DefaultFindAllQueryDto) {
+    const {
+      perPage = 20,
+      page = 1,
+      searchOne,
+      searchMany,
+    } = defaultFindAllQuery;
+
+    const where: Prisma.UserWhereInput = {
+      email: {
+        in: searchMany,
+        contains: searchOne,
+        mode: 'insensitive',
+      },
+    };
+
+    const [total, data] = await Promise.all([
+      this.prisma.user.count({
+        where: where,
+      }),
+      this.prisma.user.findMany({
+        where: where,
+        orderBy: {
+          created_at: 'desc',
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+        },
+        skip: page && perPage ? (page - 1) * perPage : undefined,
+        take: page && perPage ? perPage : undefined,
+      }),
+    ]);
+
+    return {
+      data: data,
+      meta: {
+        currentPage: page,
+        perPage,
+        total: total ?? 0,
+        totalPages: Math.ceil((total ?? 0) / perPage),
+      },
+    };
+  }
+
+  async update(id: number, updateDto: UpdateUserDto) {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        id,
+      },
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    return await this.prisma.user.update({
+      where: {
+        id,
+      },
+      data: updateDto,
+      select: {
+        id: true,
+        email: true,
+        role: true,
+      },
+    });
+  }
+
+  async delete(id: number) {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        id,
+      },
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    return await this.prisma.user.delete({
+      where: {
+        id,
+      },
+    });
+  }
+
+  async changePassword(id: number, updateDto: ChangePasswordDto) {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        id,
+      },
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    const hash = await hashPassword(updateDto.new_password);
+
+    return await this.prisma.user.update({
+      where: {
+        id,
+      },
+      data: {
+        password: hash,
+      },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+      },
+    });
+  }
+
+  async changeEmail() {
+    const users = await this.prisma.user.findMany({
+      where: {
+        email: {
+          startsWith: 'ST-',
+        },
+      },
+    });
+
+    for (const user of users) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          email: user.email.replace('ST', `${PREFIX_USER}`),
+          name: user.name.replace('ST', `${PREFIX_USER}`),
+        },
+      });
+
+      console.log(`Updated user ${user.id}`);
+    }
+
+    return 'Done';
+  }
+}
