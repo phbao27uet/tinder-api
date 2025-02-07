@@ -8,6 +8,5 @@ export function Auth(...roles: Role[]) {
   return applyDecorators(Roles(...roles), UseGuards(AuthGuard, RolesGuard));
 }
 
-export const AuthCNWarehouse = Auth(Role.CN_WAREHOUSE);
-export const AuthVNAdmin = Auth(Role.VN_ADMIN);
-export const AuthVNUser = Auth(Role.VN_USER);
+export const AuthAdmin = Auth(Role.ADMIN);
+export const AuthUser = Auth(Role.USER);

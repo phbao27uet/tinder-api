@@ -13,13 +13,15 @@ import { JWT_CONSTANTS } from 'src/shared/utils/constants';
 import { SignUpDto } from './dto/sign-up.dto';
 import { hashPassword, isPasswordValid } from '@shared/utils';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { LlmService } from '@models/llm/llm.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
-  ) {}
+    private llmService: LlmService,
+  ) { }
 
   async signup(dto: SignUpDto) {
     const userExist = await this.prisma.user.findUnique({
@@ -33,26 +35,46 @@ export class AuthService {
     }
     const hash = await argon.hash(dto.password);
 
+    const { structuredData, embeddings } = await this.llmService.processProfile(
+      dto.rawProfile,
+    );
+
     const user = await this.prisma.user.create({
       data: {
         email: dto.email,
         password: hash,
         name: dto.name,
-        role: dto.role,
+        role: 'USER',
+        embeddings: embeddings,
+        rawProfile: dto.rawProfile,
+        interests: structuredData.interests,
+        education: structuredData.education,
+        job: structuredData.job,
       },
     });
+
+    const score = this.cosineSimilarity(embeddings, embeddings);
 
     return {
       id: user.id,
       email: user.email,
       name: user.name,
       role: user.role,
+      rawProfile: user.rawProfile,
+      structuredData: structuredData,
+      embeddings: embeddings,
+      similarityScore: score,
     };
   }
 
-  async login(dto: CredentialsDto) {
-    console.log('dto', dto);
+  private cosineSimilarity(a: number[], b: number[]) {
+    const dot = a.reduce((acc, val, i) => acc + val * b[i], 0);
+    const normA = Math.sqrt(a.reduce((acc, val) => acc + val ** 2, 0));
+    const normB = Math.sqrt(b.reduce((acc, val) => acc + val ** 2, 0));
+    return dot / (normA * normB);
+  }
 
+  async login(dto: CredentialsDto) {
     const user = await this.prisma.user.findUnique({
       where: {
         email: dto.email,
@@ -78,7 +100,7 @@ export class AuthService {
     return { ...tokens, user: userWithoutPassword };
   }
 
-  async changePassword(userId: number, changePasswordDto: ChangePasswordDto) {
+  async changePassword(userId: string, changePasswordDto: ChangePasswordDto) {
     const user = await this.prisma.user.findUnique({
       where: {
         id: userId,
@@ -112,22 +134,22 @@ export class AuthService {
     return true;
   }
 
-  async logout(userId: number): Promise<boolean> {
+  async logout(userId: string): Promise<boolean> {
     await this.prisma.user.updateMany({
       where: {
         id: userId,
-        refresh_token: {
+        refreshToken: {
           not: null,
         },
       },
       data: {
-        refresh_token: null,
+        refreshToken: null,
       },
     });
     return true;
   }
 
-  async me(userId: number) {
+  async me(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: {
         id: userId,
@@ -144,7 +166,7 @@ export class AuthService {
   }
 
   async refreshTokens(
-    userId: number,
+    userId: string,
     rt: string,
   ): Promise<Omit<Tokens, 'refreshToken'>> {
     const user = await this.prisma.user.findUnique({
@@ -152,10 +174,10 @@ export class AuthService {
         id: userId,
       },
     });
-    if (!user || !user.refresh_token)
+    if (!user || !user.refreshToken)
       throw new ForbiddenException('Access Denied');
 
-    const rtMatches = await argon.verify(user.refresh_token, rt);
+    const rtMatches = await argon.verify(user.refreshToken, rt);
 
     console.log('rtMatches', rtMatches);
 
@@ -175,19 +197,19 @@ export class AuthService {
     return { accessToken: newAccessToken };
   }
 
-  async updateRtHash(userId: number, rt: string): Promise<void> {
+  async updateRtHash(userId: string, rt: string): Promise<void> {
     const hash = await argon.hash(rt);
     await this.prisma.user.update({
       where: {
         id: userId,
       },
       data: {
-        refresh_token: hash,
+        refreshToken: hash,
       },
     });
   }
 
-  async generateToken(sub: number, username: string, role = 'USER') {
+  async generateToken(sub: string, username: string, role = 'USER') {
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(
         {

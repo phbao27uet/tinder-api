@@ -6,6 +6,10 @@ import { UsersModule } from './users/users.module';
 import { APP_PIPE } from '@nestjs/core';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { AppController } from './app.controller';
+import { LlmModule } from './llm/llm.module';
+import { GaleShapleyModule } from './gale-shapley/gale-shapley.module';
+import { SwipesModule } from './swipes/swipes.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -13,13 +17,13 @@ import { AppController } from './app.controller';
       isGlobal: true,
       expandVariables: true,
       load: [configurations],
-      // validate: (config) => {
-      //   console.log(config);
-      //   return config;
-      // },
     }),
     AuthModule,
     UsersModule,
+    LlmModule,
+    GaleShapleyModule,
+    SwipesModule,
+    ScheduleModule.forRoot(),
   ],
   controllers: [AppController],
   providers: [

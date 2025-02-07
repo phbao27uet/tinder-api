@@ -7,7 +7,7 @@ import { hashPassword, PREFIX_USER } from '@shared/utils';
 
 @Injectable()
 export class UserService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async findAll(defaultFindAllQuery: DefaultFindAllQueryDto) {
     const {
@@ -32,7 +32,7 @@ export class UserService {
       this.prisma.user.findMany({
         where: where,
         orderBy: {
-          created_at: 'desc',
+          createdAt: 'desc',
         },
         select: {
           id: true,
@@ -56,7 +56,7 @@ export class UserService {
     };
   }
 
-  async update(id: number, updateDto: UpdateUserDto) {
+  async update(id: string, updateDto: UpdateUserDto) {
     const user = await this.prisma.user.findUnique({
       where: {
         id,
@@ -80,7 +80,7 @@ export class UserService {
     });
   }
 
-  async delete(id: number) {
+  async delete(id: string) {
     const user = await this.prisma.user.findUnique({
       where: {
         id,
@@ -98,7 +98,7 @@ export class UserService {
     });
   }
 
-  async changePassword(id: number, updateDto: ChangePasswordDto) {
+  async changePassword(id: string, updateDto: ChangePasswordDto) {
     const user = await this.prisma.user.findUnique({
       where: {
         id,
@@ -124,29 +124,5 @@ export class UserService {
         role: true,
       },
     });
-  }
-
-  async changeEmail() {
-    const users = await this.prisma.user.findMany({
-      where: {
-        email: {
-          startsWith: 'ST-',
-        },
-      },
-    });
-
-    for (const user of users) {
-      await this.prisma.user.update({
-        where: { id: user.id },
-        data: {
-          email: user.email.replace('ST', `${PREFIX_USER}`),
-          name: user.name.replace('ST', `${PREFIX_USER}`),
-        },
-      });
-
-      console.log(`Updated user ${user.id}`);
-    }
-
-    return 'Done';
   }
 }

@@ -7,46 +7,24 @@ async function main() {
   const password = await hashPassword('123123a');
 
   await prisma.user.upsert({
-    where: { id: 1 },
+    where: { id: '666666666666666666666666' },
     update: {},
     create: {
       email: 'admin',
       password: password,
-      role: 'VN_ADMIN',
+      role: 'ADMIN',
       name: 'Admin',
     },
   });
 
   await prisma.user.upsert({
-    where: { id: 2 },
+    where: { id: '666666666666666666666667' },
     update: {},
     create: {
       email: 'user',
       password: password,
-      role: 'VN_USER',
+      role: 'USER',
       name: 'Nguyễn Văn A',
-    },
-  });
-
-  await prisma.user.upsert({
-    where: { id: 3 },
-    update: {},
-    create: {
-      email: 'kho_tq',
-      password: password,
-      role: 'CN_WAREHOUSE',
-      name: 'Kho TQ',
-    },
-  });
-
-  await prisma.user.upsert({
-    where: { id: 4 },
-    update: {},
-    create: {
-      email: 'kho_vn',
-      password: password,
-      role: 'VN_WAREHOUSE',
-      name: 'Kho VN',
     },
   });
 

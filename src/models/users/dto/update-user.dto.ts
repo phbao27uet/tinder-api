@@ -4,13 +4,13 @@ import { z } from 'nestjs-zod/z';
 
 export const UpdateUserSchema = z.object({
   role: z
-    .enum([Role.CN_WAREHOUSE, Role.VN_USER, Role.VN_ADMIN, Role.VN_WAREHOUSE])
+    .enum([Role.ADMIN, Role.USER])
     .optional()
     .describe('The status of the user'),
   email: z.string().optional().describe('The email of the user'),
 });
 
-export class UpdateUserDto extends createZodDto(UpdateUserSchema) {}
+export class UpdateUserDto extends createZodDto(UpdateUserSchema) { }
 
 export const ChangePasswordSchema = z.object({
   new_password: z.string().trim().min(6, {
@@ -18,4 +18,4 @@ export const ChangePasswordSchema = z.object({
   }),
 });
 
-export class ChangePasswordDto extends createZodDto(ChangePasswordSchema) {}
+export class ChangePasswordDto extends createZodDto(ChangePasswordSchema) { }

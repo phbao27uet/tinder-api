@@ -10,7 +10,7 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService) { }
 
   @Post('login')
   async login(@Body() loginDto: CredentialsDto) {
@@ -18,13 +18,13 @@ export class AuthController {
   }
 
   @Post('logout')
-  async logout(@GetCurrentUserId() userId: number) {
+  async logout(@GetCurrentUserId() userId: string) {
     return this.authService.logout(userId);
   }
 
   @UseGuards(AuthGuard)
   @Get('me')
-  async me(@GetCurrentUserId() userId: number) {
+  async me(@GetCurrentUserId() userId: string) {
     return this.authService.me(userId);
   }
 
@@ -36,7 +36,7 @@ export class AuthController {
   @Patch('change-password')
   async changePassword(
     @Body() changePasswordDto: ChangePasswordDto,
-    @GetCurrentUserId() userId: number,
+    @GetCurrentUserId() userId: string,
   ) {
     console.log({ userId, changePasswordDto });
 
@@ -47,7 +47,7 @@ export class AuthController {
   @Get('refresh')
   async refreshToken(
     @GetRt() refreshToken: string,
-    @GetCurrentUserId() userId: number,
+    @GetCurrentUserId() userId: string,
   ) {
     return this.authService.refreshTokens(userId, refreshToken);
   }

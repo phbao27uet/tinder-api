@@ -4,6 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { AuthController } from './auth.controller';
 import { JWT_CONSTANTS } from 'src/shared/utils/constants';
 import { PrismaModule } from 'src/shared/prisma/prisma.module';
+import { LlmModule } from '@models/llm/llm.module';
 
 @Module({
   imports: [
@@ -13,15 +14,10 @@ import { PrismaModule } from 'src/shared/prisma/prisma.module';
       signOptions: { expiresIn: JWT_CONSTANTS.ACCESS_TOKEN_EXPIRES_IN },
     }),
     PrismaModule,
+    LlmModule,
   ],
-  providers: [
-    // {
-    //   provide: APP_GUARD,
-    //   useClass: RolesGuard,
-    // },
-    AuthService,
-  ],
+  providers: [AuthService],
   controllers: [AuthController],
   exports: [AuthService],
 })
-export class AuthModule {}
+export class AuthModule { }

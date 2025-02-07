@@ -8,29 +8,64 @@ generator client {
 }
 
 model User {
-  id          String       @id @default(auto()) @map("_id") @db.ObjectId
-  email       String       @unique
-  password    String
-  role        Role
-  images      String[]
-  shortVideo  String
-  name        String?
-  age         Int?
-  gender      String?
-  location    Json? // GeoJSON format for geospatial queries
-  rawProfile  String? // Raw text input by user
-  interests   String[]
-  education   String?
-  job         String?
-  embeddings  Float[] // Vector embeddings for semantic search
-  matchIDs    String[]     @db.ObjectId
-  matches     Match[]      @relation(fields: [matchIDs], references: [id])
-  preferences Preference[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  email        String   @unique
+  password     String
+  role         Role
+  images       String[]
+  shortVideo   String?
+  refreshToken String?
+  name         String?
+  age          Int?
+  gender       Gender?
+  location     Json? // GeoJSON format for geospatial queries
 
-  swipers     Swipe[] @relation("swiper")
-  targetUsers Swipe[] @relation("targetUser")
+  // LLM
+  rawProfile String? // Raw text input by user
+  interests  String[]
+  job        String?
+  embeddings Float[] // Vector embeddings for semantic search
+
+  // Form
+  lookingFor          LookingFor?
+  languages           String[]            @default([])
+  zodiac              ZodiacSign?
+  education           Education?
+  futureFamily        FutureFamily?
+  communicationStyle  CommunicationStyle?
+  loveLanguage        LoveLanguage?
+  pet                 Pets?
+  alcoholConsumption  AlcoholConsumption?
+  smoking             SmokingPreference?
+  exerciseHabit       ExerciseFrequency?
+  diet                DietaryPreference?
+  socialMediaActivity SocialMediaUsage?
+  sleepHabit          SleepPattern?
+  // ====
+  matchIDs            String[]            @db.ObjectId
+  matches             Match[]             @relation(fields: [matchIDs], references: [id])
+  preferences         Preference[]
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  swipers        Swipe[]         @relation("swiper")
+  targetUsers    Swipe[]         @relation("targetUser")
+  searchSettings SearchSetting[]
+}
+
+model SearchSetting {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  user        User     @relation(fields: [userId], references: [id])
+  ageRange    Int[] // [minAge, maxAge]
+  gender      Gender? // "male", "female", "other"
+  maxDistance Int? // Khoảng cách tối đa (km)
+  interests   String[] // Các sở thích ưu tiên
+  hasBio      Boolean?
+
+  lastUpdated DateTime @default(now())
+
+  @@index([userId])
 }
 
 model Swipe {
@@ -52,11 +87,12 @@ model Match {
 }
 
 model Preference {
-  id             String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId         String   @db.ObjectId
-  preferredOrder Int[]
-  lastUpdated    DateTime @default(now())
-  user           User     @relation(fields: [userId], references: [id])
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId           String   @db.ObjectId
+  preferredOrder   String[] // Array of user IDs
+  similarityScores Float[] // Array of similarity scores for each userID
+  lastUpdated      DateTime @default(now())
+  user             User     @relation(fields: [userId], references: [id])
 }
 
 enum Direction {
@@ -68,4 +104,137 @@ enum Direction {
 enum Role {
   USER
   ADMIN
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+// User: Lưu trữ thông tin người dùng và embeddings.
+
+// Swipe: Theo dõi hành vi swipe.
+
+// Match: Lưu trữ các cặp đôi thành công.
+
+// Preference: Danh sách ưu tiên cho thuật toán Gale-Shapley.
+
+enum LookingFor {
+  NGUOI_YEU // Người yêu
+  HEN_HO_LAU_DAI // Bạn hẹn hò lâu dài
+  BAT_KI_DIEU_GI_CO_THE // Bất kì điều gì có thể 
+  QUAN_HE_KHONG_RANG_BUOC // Quan hệ không ràng buộc
+  NHUNG_NGUOI_BAN_MOI // Những người bạn mới
+  CHUA_RO // Chưa rõ
+}
+
+enum ZodiacSign {
+  BachDuong // Aries
+  KimNguu // Taurus
+  SongTu // Gemini
+  CuGiai // Cancer
+  SuTu // Leo
+  XuNu // Virgo
+  ThienBinh // Libra
+  BoCap // Scorpio
+  NhanMa // Sagittarius
+  MaKet // Capricorn
+  BaoBinh // Aquarius
+  SongNgu // Pisces
+}
+
+enum Education {
+  CU_NHAN
+  DANG_HOC_DAI_HOC
+  THPT
+  TIEN_SI
+  THAC_SI
+  SAU_DAI_HOC
+  TRUONG_DAY_NGHE
+}
+
+enum FutureFamily {
+  MUON_CO_CON
+  KHONG_MUON_CO_CON
+  CO_ROI_MUON_CO_THEM
+  CO_ROI_KHONG_MUON_CO_THEM
+  CHUA_RO
+}
+
+enum CommunicationStyle {
+  NGHIEN_NHAN_TIN
+  THICH_GOI_DIEN
+  THICH_GOI_VIDEO
+  IT_NHAN_TIN
+  THICH_GAP_MAT_TRUC_TIEP
+}
+
+enum LoveLanguage {
+  NHUNG_HANH_DONG_TINH_TE
+  NHUNG_MON_QUA
+  NHUNG_CU_CHI_AU_YEM
+  NHUNG_LOI_KHEN
+  THOI_GIAN_BEN_NHAU
+}
+
+enum Pets {
+  CHO // Chó
+  MEO // Mèo
+  BO_SAT // Bò sát
+  DONG_VAT_LUONG_CU // Động vật lưỡng cư
+  LOAI_CHIM // Loại chim
+  CA // Cá
+  RUA // Rùa
+  HAMSTER // Hamster
+  THO // Thỏ
+  KHAC // Khác
+  KHONG_NUOI_THU_CUNG // Không nuôi thú cưng
+  MUON_NUOI_THU_CUNG // Muốn nuôi thú cưng
+  DI_UNG_VOI_DONG_VAT // Dị ứng với động vật
+}
+
+enum AlcoholConsumption {
+  KHONG_DANH_CHO_MINH
+  LUON_TINH_TAO
+  UONG_CO_TRACH_NGHIEM
+  CHI_NHUNG_DIP_DAC_BIET
+  UONG_GIAO_LUU_VAO_CUOI_TUAN
+  HAU_NHU_MOI_TOI
+}
+
+enum SmokingPreference {
+  HUT_THUOC_VOI_BAN_BE
+  HUT_THUOC_KHI_NHAU
+  KHONG_HUT_THUOC
+  HUT_THUOC_THUONG_XUYEN
+  DANG_CO_GANG_BO
+}
+
+enum ExerciseFrequency {
+  HANG_NGAY
+  THUONG_XUYEN
+  THINH_THOANG
+  KHONG_TAP
+}
+
+enum DietaryPreference {
+  AN_THUAN_CHAY
+  AN_CHAY
+  CHI_AN_HAI_SAN_RAU_CU
+  CHI_AN_THIT
+  KHONG_AN_KIENG
+  KHAC
+}
+
+enum SocialMediaUsage {
+  INFLUENCER
+  HOAT_DONG_TICH_CUC
+  KHONG_DUNG_MANG
+  LUOT_DAO_AM_THAM
+}
+
+enum SleepPattern {
+  DAY_SOM
+  CU_DEM
+  GIO_GIAC_LINH_HOAT
 }
