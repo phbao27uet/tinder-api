@@ -35,9 +35,7 @@ export class AuthService {
     }
     const hash = await argon.hash(dto.password);
 
-    const { structuredData, embeddings } = await this.llmService.processProfile(
-      dto.rawProfile,
-    );
+    const { embeddings, text } = await this.llmService.processUserData(dto);
 
     const user = await this.prisma.user.create({
       data: {
@@ -47,24 +45,60 @@ export class AuthService {
         role: 'USER',
         embeddings: embeddings,
         rawProfile: dto.rawProfile,
-        interests: structuredData.interests,
-        education: structuredData.education,
-        job: structuredData.job,
+        interests: dto.interests,
+        education: dto.education,
+        age: dto.age,
+        gender: dto.gender,
+        lookingFor: dto.lookingFor,
+        zodiac: dto.zodiacSign,
+        futureFamily: dto.futureFamily,
+        communicationStyle: dto.communicationStyle,
+        loveLanguage: dto.loveLanguage,
+        pet: dto.pet,
+        alcoholConsumption: dto.alcoholConsumption,
+        smoking: dto.smoking,
+        exerciseHabit: dto.exerciseHabit,
+        diet: dto.diet,
+        socialMediaActivity: dto.socialMediaActivity,
+        sleepHabit: dto.sleepHabit,
+        languages: dto.languages,
       },
     });
 
-    const score = this.cosineSimilarity(embeddings, embeddings);
+    const user1 = await this.prisma.user.findUnique({
+      where: {
+        email: 'pqbao7@gmail.com',
+      },
+    });
 
+    const score = this.cosineSimilarity(
+      user.embeddings,
+      user1?.embeddings || [],
+    );
     return {
       id: user.id,
       email: user.email,
       name: user.name,
       role: user.role,
-      rawProfile: user.rawProfile,
-      structuredData: structuredData,
-      embeddings: embeddings,
-      similarityScore: score,
+      score,
+      text,
     };
+  }
+
+  async compare() {
+    const users = await this.prisma.user.findMany({
+      where: {
+        email: {
+          in: ['pqbao5@gmail.com', 'pqbao8@gmail.com'],
+        },
+      },
+    });
+
+    const scores = this.cosineSimilarity(
+      users[0].embeddings,
+      users[1].embeddings,
+    );
+    return scores;
   }
 
   private cosineSimilarity(a: number[], b: number[]) {

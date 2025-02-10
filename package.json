@@ -10,6 +10,7 @@
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start --max_old_space_size=4096",
     "start:dev": "TZ=0 nest start --watch",
+    "generate": "pnpx prisma db push && pnpm prisma generate",
     "dev": "TZ=0 nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "TZ=0 node dist/src/main",
@@ -19,7 +20,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "postinstall": "yarn prisma generate"
+    "postinstall": "pnpm prisma generate"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

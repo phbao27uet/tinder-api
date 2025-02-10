@@ -32,14 +32,13 @@ export class AuthController {
   async signup(@Body() signupDto: SignUpDto) {
     return this.authService.signup(signupDto);
   }
+
   @UseGuards(AuthGuard)
   @Patch('change-password')
   async changePassword(
     @Body() changePasswordDto: ChangePasswordDto,
     @GetCurrentUserId() userId: string,
   ) {
-    console.log({ userId, changePasswordDto });
-
     return this.authService.changePassword(userId, changePasswordDto);
   }
 
@@ -50,5 +49,10 @@ export class AuthController {
     @GetCurrentUserId() userId: string,
   ) {
     return this.authService.refreshTokens(userId, refreshToken);
+  }
+
+  @Post('compare')
+  async compare() {
+    return this.authService.compare();
   }
 }

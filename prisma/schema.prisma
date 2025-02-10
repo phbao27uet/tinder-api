@@ -41,12 +41,13 @@ model User {
   diet                DietaryPreference?
   socialMediaActivity SocialMediaUsage?
   sleepHabit          SleepPattern?
+
   // ====
-  matchIDs            String[]            @db.ObjectId
-  matches             Match[]             @relation(fields: [matchIDs], references: [id])
-  preferences         Preference[]
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
+  matchIDs    String[]     @db.ObjectId
+  matches     Match[]      @relation(fields: [matchIDs], references: [id])
+  preferences Preference[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
   swipers        Swipe[]         @relation("swiper")
   targetUsers    Swipe[]         @relation("targetUser")
@@ -112,11 +113,8 @@ enum Gender {
 }
 
 // User: Lưu trữ thông tin người dùng và embeddings.
-
 // Swipe: Theo dõi hành vi swipe.
-
 // Match: Lưu trữ các cặp đôi thành công.
-
 // Preference: Danh sách ưu tiên cho thuật toán Gale-Shapley.
 
 enum LookingFor {

@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/shared/prisma/prisma.service';
 import { ChangePasswordDto, UpdateUserDto } from './dto/update-user.dto';
-import { hashPassword, PREFIX_USER } from '@shared/utils';
+import { hashPassword } from '@shared/utils';
 
 @Injectable()
 export class UserService {
