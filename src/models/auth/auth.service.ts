@@ -43,6 +43,7 @@ export class AuthService {
         password: hash,
         name: dto.name,
         role: 'USER',
+        images: dto.images,
         embeddings: embeddings,
         rawProfile: dto.rawProfile,
         interests: dto.interests,
@@ -62,25 +63,16 @@ export class AuthService {
         socialMediaActivity: dto.socialMediaActivity,
         sleepHabit: dto.sleepHabit,
         languages: dto.languages,
+        shortVideo: dto.shortVideo,
+        location: dto.location, // JSON
       },
     });
 
-    const user1 = await this.prisma.user.findUnique({
-      where: {
-        email: 'pqbao7@gmail.com',
-      },
-    });
-
-    const score = this.cosineSimilarity(
-      user.embeddings,
-      user1?.embeddings || [],
-    );
     return {
       id: user.id,
       email: user.email,
       name: user.name,
       role: user.role,
-      score,
       text,
     };
   }

@@ -34,6 +34,7 @@ const SignUpSchema = z.object({
   rawProfile: z.string().min(1, {
     message: 'Thông tin không được để trống',
   }),
+  images: z.array(z.string()),
   // ====
   interests: z.array(z.string()).optional(),
   lookingFor: z.nativeEnum(LookingFor).optional(),
@@ -50,6 +51,8 @@ const SignUpSchema = z.object({
   diet: z.nativeEnum(DietaryPreference).optional(),
   socialMediaActivity: z.nativeEnum(SocialMediaUsage).optional(),
   sleepHabit: z.nativeEnum(SleepPattern).optional(),
+  shortVideo: z.string().optional(),
+  location: z.string().optional(), // JSON toạ độ
 });
 
 export class SignUpDto extends createZodDto(SignUpSchema) { }
