@@ -56,6 +56,68 @@ export class UserService {
     };
   }
 
+  async findMatches(id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        id,
+      },
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+    
+    console.log(user.embeddings)
+    
+    // Vector search với MongoDB Atlas
+    const pipeline = [
+      {
+        $vectorSearch: {
+          index: "user_embeddings",
+          path: "embeddings",
+          queryVector: user.embeddings,
+          numCandidates: 100,
+          limit: 10, // Over-fetch để filter thêm
+        },
+      },
+      {
+        $match: {
+          _id: { $ne: user.id },
+          // Thêm các điều kiện khác từ searchSettings
+          // age: { $gte: currentUser.searchSettings?.minAge },
+          // gender: { $in: currentUser.preferences?.genders },
+        },
+      },
+      {
+        $project: { _id: 1, rawProfile: 1 },
+      },
+    ];
+    
+    const matches = await this.prisma.user.aggregateRaw({
+      pipeline
+    })
+
+    const matchesCmd = await this.prisma.$runCommandRaw({
+      aggregate: 'User',
+      pipeline: [
+        {
+          $vectorSearch: {
+            index: 'user_embeddings',
+            path: 'embeddings',
+            queryVector: user.embeddings,
+            limit: 20,
+            numCandidates: 100,
+          },
+        },
+        { $match: { _id: { $ne: user.id } } },
+        { $project: { _id: 1, rawProfile: 1 } },
+      ],
+    });
+
+
+    return {matches, matchesCmd};
+  }
+
   async update(id: string, updateDto: UpdateUserDto) {
     const user = await this.prisma.user.findUnique({
       where: {

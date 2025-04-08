@@ -37,7 +37,7 @@ export class AuthService {
 
     const { embeddings, text } = await this.llmService.processUserData(dto);
 
-    const user = await this.prisma.user.create({
+    const currentUser = await this.prisma.user.create({
       data: {
         email: dto.email,
         password: hash,
@@ -66,14 +66,52 @@ export class AuthService {
         shortVideo: dto.shortVideo,
         location: dto.location, // JSON
       },
-    });
+    }); 
+
+
+     // Vector search với MongoDB Atlas
+     const pipeline = [
+      {
+        $vectorSearch: {
+          index: "user_embeddings",
+          path: "embeddings",
+          queryVector: currentUser.embeddings,
+          numCandidates: 100,
+          limit: 10, // Over-fetch để filter thêm
+        },
+      },
+      {
+        $match: {
+          _id: { $ne: currentUser.id },
+          // Thêm các điều kiện khác từ searchSettings
+          // age: { $gte: currentUser.searchSettings?.minAge },
+          // gender: { $in: currentUser.preferences?.genders },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          rawProfile: 1,
+          age: 1,
+          gender: 1,
+          score: {
+            $meta: "vectorSearchScore",
+          },
+        },
+      },
+    ];
+    
+    const matches = await this.prisma.user.aggregateRaw({
+      pipeline
+    })
 
     return {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
+      id: currentUser.id,
+      email: currentUser.email,
+      name: currentUser.name,
+      role: currentUser.role,
       text,
+      matches,
     };
   }
 

@@ -22,6 +22,11 @@ export class UserController {
     return this.userService.findAll(queryDto);
   }
 
+  @Get(':id/matches')
+  async getMatches(@Param('id') id: string) {
+    return this.userService.findMatches(id);
+  }
+
   @Auth('ADMIN', 'USER')
   @Patch(':id')
   async update(@Param('id') id: string, @Body() updateDto: UpdateUserDto) {
