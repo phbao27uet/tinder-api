@@ -8,7 +8,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { UserService } from './users.service';
-import { Auth } from '@shared/decorators';
+import { Auth, GetCurrentUserId } from '@shared/decorators';
 import { DefaultFindAllQueryDto } from '@models/base/dto';
 import { ChangePasswordDto, UpdateUserDto } from './dto/update-user.dto';
 
@@ -20,6 +20,12 @@ export class UserController {
   @Get()
   async findAll(@Query() queryDto: DefaultFindAllQueryDto) {
     return this.userService.findAll(queryDto);
+  }
+
+  @Auth('USER')
+  @Get('matches')
+  async matches(@GetCurrentUserId() id: string) {
+    return this.userService.findMatches(id);
   }
 
   @Get(':id/matches')

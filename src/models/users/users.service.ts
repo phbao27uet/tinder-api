@@ -66,56 +66,89 @@ export class UserService {
     if (!user) {
       throw new Error('User not found');
     }
-    
-    console.log(user.embeddings)
-    
-    // Vector search với MongoDB Atlas
-    const pipeline = [
-      {
-        $vectorSearch: {
-          index: "user_embeddings",
-          path: "embeddings",
-          queryVector: user.embeddings,
-          numCandidates: 100,
-          limit: 10, // Over-fetch để filter thêm
-        },
+
+    const users = await this.prisma.user.findMany({
+      where: {
+        id: {
+          not: id
+        }
       },
-      {
-        $match: {
-          _id: { $ne: user.id },
-          // Thêm các điều kiện khác từ searchSettings
-          // age: { $gte: currentUser.searchSettings?.minAge },
-          // gender: { $in: currentUser.preferences?.genders },
-        },
-      },
-      {
-        $project: { _id: 1, rawProfile: 1 },
-      },
-    ];
-    
-    const matches = await this.prisma.user.aggregateRaw({
-      pipeline
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        images: true,
+        shortVideo: true,
+        birthday: true,
+        gender: true,
+        preferredDistance: true,
+        rawProfile: true,
+        interests: true,
+        lookingFor: true,
+        languages: true,
+        zodiac: true,
+        education: true,
+        communicationStyle: true,
+        pet: true,
+        alcoholConsumption: true,
+        smoking: true,
+        exerciseHabit: true,
+        diet: true,
+        socialMediaActivity: true,
+        sleepHabit: true,
+      }
     })
 
-    const matchesCmd = await this.prisma.$runCommandRaw({
-      aggregate: 'User',
-      pipeline: [
-        {
-          $vectorSearch: {
-            index: 'user_embeddings',
-            path: 'embeddings',
-            queryVector: user.embeddings,
-            limit: 20,
-            numCandidates: 100,
-          },
-        },
-        { $match: { _id: { $ne: user.id } } },
-        { $project: { _id: 1, rawProfile: 1 } },
-      ],
-    });
+    return users;
+
+    // Vector search với MongoDB Atlas
+    // const pipeline = [
+    //   {
+    //     $vectorSearch: {
+    //       index: "user_embeddings",
+    //       path: "embeddings",
+    //       queryVector: user.embeddings,
+    //       numCandidates: 100,
+    //       limit: 10, // Over-fetch để filter thêm
+    //     },
+    //   },
+    //   {
+    //     $match: {
+    //       _id: { $ne: user.id },
+    //       // Thêm các điều kiện khác từ searchSettings
+    //       // age: { $gte: currentUser.searchSettings?.minAge },
+    //       // gender: { $in: currentUser.preferences?.genders },
+    //     },
+    //   },
+    //   {
+    //     $project: { _id: 1, rawProfile: 1 },
+    //   },
+    // ];
+    
+    // const matches = await this.prisma.user.aggregateRaw({
+    //   pipeline
+    // })
+
+    // const matchesCmd = await this.prisma.$runCommandRaw({
+    //   aggregate: 'User',
+    //   pipeline: [
+    //     {
+    //       $vectorSearch: {
+    //         index: 'user_embeddings',
+    //         path: 'embeddings',
+    //         queryVector: user.embeddings,
+    //         limit: 20,
+    //         numCandidates: 100,
+    //       },
+    //     },
+    //     { $match: { _id: { $ne: user.id } } },
+    //     { $project: { _id: 1, rawProfile: 1 } },
+    //   ],
+    // });
 
 
-    return {matches, matchesCmd};
+    // return {matches, matchesCmd};
   }
 
   async update(id: string, updateDto: UpdateUserDto) {
