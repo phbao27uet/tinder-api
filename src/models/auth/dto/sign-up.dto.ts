@@ -21,15 +21,13 @@ const SignUpSchema = z.object({
   email: z.string().min(1, {
     message: 'Tên tài khoản không được để trống',
   }),
-  password: z.string().trim().min(6, {
-    message: 'Mật khẩu ít nhất 6 ký tự',
+  password: z.string().trim().min(1, {
+    message: 'Mật khẩu ít nhất 1 ký tự',
   }),
   name: z.string().min(1, {
     message: 'Tên không được để trống',
   }),
-  age: z.number().min(18, {
-    message: 'Tuổi phải lớn hơn 18',
-  }),
+  birthday: z.date().optional(),
   gender: z.nativeEnum(Gender).optional(),
   rawProfile: z.string().min(1, {
     message: 'Thông tin không được để trống',
@@ -52,7 +50,15 @@ const SignUpSchema = z.object({
   socialMediaActivity: z.nativeEnum(SocialMediaUsage).optional(),
   sleepHabit: z.nativeEnum(SleepPattern).optional(),
   shortVideo: z.string().optional(),
-  location: z.string().optional(), // JSON toạ độ
+  preferredDistance: z.number().optional(),
 });
 
 export class SignUpDto extends createZodDto(SignUpSchema) { }
+
+const checkEmailSchema = z.object({
+  email: z.string().min(1, {
+    message: 'Tên tài khoản không được để trống',
+  }),
+});
+
+export class CheckEmailDto extends createZodDto(checkEmailSchema) { }

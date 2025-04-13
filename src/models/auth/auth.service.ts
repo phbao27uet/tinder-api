@@ -10,10 +10,11 @@ import { CredentialsDto } from './dto';
 import { Tokens } from './types';
 import { PrismaService } from 'src/shared/prisma/prisma.service';
 import { JWT_CONSTANTS } from 'src/shared/utils/constants';
-import { SignUpDto } from './dto/sign-up.dto';
+import { CheckEmailDto, SignUpDto } from './dto/sign-up.dto';
 import { hashPassword, isPasswordValid } from '@shared/utils';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { LlmService } from '@models/llm/llm.service';
+import { Interest } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -46,9 +47,9 @@ export class AuthService {
         images: dto.images,
         embeddings: embeddings,
         rawProfile: dto.rawProfile,
-        interests: dto.interests,
+        interests: dto.interests as any,
         education: dto.education,
-        age: dto.age,
+        birthday: dto.birthday,
         gender: dto.gender,
         lookingFor: dto.lookingFor,
         zodiac: dto.zodiacSign,
@@ -64,7 +65,7 @@ export class AuthService {
         sleepHabit: dto.sleepHabit,
         languages: dto.languages,
         shortVideo: dto.shortVideo,
-        location: dto.location, // JSON
+        preferredDistance: dto.preferredDistance, // JSON
       },
     }); 
 
@@ -112,6 +113,18 @@ export class AuthService {
       role: currentUser.role,
       text,
       matches,
+    };
+  }
+
+  async checkEmail(dto: CheckEmailDto) {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        email: dto.email,
+      },
+    });
+
+    return {
+      exists: !!user,
     };
   }
 
