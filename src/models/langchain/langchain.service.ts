@@ -51,7 +51,7 @@ export class LangChainService {
       10,
       {
         preFilters: {
-          age: { $gte: Number(user.age) - 5, $lte: Number(user.age) + 5 },
+          // age: { $gte: Number(user.age) - 5, $lte: Number(user.age) + 5 },
         },
       },
     );

@@ -4,7 +4,7 @@ import { CredentialsDto } from './dto';
 import { GetCurrentUserId } from 'src/shared/decorators/get-current-user-id.decorator';
 import { RtGuard } from './guards/rt.guard';
 import { GetRt } from '@shared/decorators';
-import { SignUpDto } from './dto/sign-up.dto';
+import { CheckEmailDto, SignUpDto } from './dto/sign-up.dto';
 import { AuthGuard } from './guards/auth.guard';
 import { ChangePasswordDto } from './dto/change-password.dto';
 
@@ -31,6 +31,11 @@ export class AuthController {
   @Post('signup')
   async signup(@Body() signupDto: SignUpDto) {
     return this.authService.signup(signupDto);
+  }
+
+  @Post('check-email')
+  async checkEmail(@Body() checkEmailDto: CheckEmailDto) {
+    return this.authService.checkEmail(checkEmailDto);
   }
 
   @UseGuards(AuthGuard)

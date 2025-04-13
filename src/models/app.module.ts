@@ -10,6 +10,7 @@ import { LlmModule } from './llm/llm.module';
 import { GaleShapleyModule } from './gale-shapley/gale-shapley.module';
 import { SwipesModule } from './swipes/swipes.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { UploadModule } from 'src/upload/upload.model';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     LlmModule,
     GaleShapleyModule,
     SwipesModule,
+    UploadModule,
     ScheduleModule.forRoot(),
   ],
   controllers: [AppController],

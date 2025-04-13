@@ -16,10 +16,11 @@ model User {
   shortVideo   String?
   refreshToken String?
   name         String?
-  age          Int?
+  birthday     DateTime?
   gender       Gender?
-  location     Json? // GeoJSON format for geospatial queries
-
+  // location     Json? // GeoJSON format for geospatial queries
+  preferredDistance Int?
+  
   // LLM
   rawProfile String? // Raw text input by user
   interests  Interest[]

@@ -10,10 +10,11 @@ import { CredentialsDto } from './dto';
 import { Tokens } from './types';
 import { PrismaService } from 'src/shared/prisma/prisma.service';
 import { JWT_CONSTANTS } from 'src/shared/utils/constants';
-import { SignUpDto } from './dto/sign-up.dto';
+import { CheckEmailDto, SignUpDto } from './dto/sign-up.dto';
 import { hashPassword, isPasswordValid } from '@shared/utils';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { LlmService } from '@models/llm/llm.service';
+import { Interest } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -37,7 +38,7 @@ export class AuthService {
 
     const { embeddings, text } = await this.llmService.processUserData(dto);
 
-    const user = await this.prisma.user.create({
+    const currentUser = await this.prisma.user.create({
       data: {
         email: dto.email,
         password: hash,
@@ -46,9 +47,9 @@ export class AuthService {
         images: dto.images,
         embeddings: embeddings,
         rawProfile: dto.rawProfile,
-        interests: dto.interests,
+        interests: dto.interests as any,
         education: dto.education,
-        age: dto.age,
+        birthday: dto.birthday,
         gender: dto.gender,
         lookingFor: dto.lookingFor,
         zodiac: dto.zodiacSign,
@@ -64,16 +65,66 @@ export class AuthService {
         sleepHabit: dto.sleepHabit,
         languages: dto.languages,
         shortVideo: dto.shortVideo,
-        location: dto.location, // JSON
+        preferredDistance: dto.preferredDistance, // JSON
+      },
+    }); 
+
+
+     // Vector search với MongoDB Atlas
+     const pipeline = [
+      {
+        $vectorSearch: {
+          index: "user_embeddings",
+          path: "embeddings",
+          queryVector: currentUser.embeddings,
+          numCandidates: 100,
+          limit: 10, // Over-fetch để filter thêm
+        },
+      },
+      {
+        $match: {
+          _id: { $ne: currentUser.id },
+          // Thêm các điều kiện khác từ searchSettings
+          // age: { $gte: currentUser.searchSettings?.minAge },
+          // gender: { $in: currentUser.preferences?.genders },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          rawProfile: 1,
+          age: 1,
+          gender: 1,
+          score: {
+            $meta: "vectorSearchScore",
+          },
+        },
+      },
+    ];
+    
+    const matches = await this.prisma.user.aggregateRaw({
+      pipeline
+    })
+
+    return {
+      id: currentUser.id,
+      email: currentUser.email,
+      name: currentUser.name,
+      role: currentUser.role,
+      text,
+      matches,
+    };
+  }
+
+  async checkEmail(dto: CheckEmailDto) {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        email: dto.email,
       },
     });
 
     return {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-      text,
+      exists: !!user,
     };
   }
 

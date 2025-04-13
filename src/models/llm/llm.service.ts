@@ -85,7 +85,7 @@ export class LlmService {
     return `
     **Thông tin cơ bản**:
     - Tên: ${formData.name || 'Chưa cung cấp'}
-    - Tuổi: ${formData.age || 'Chưa cung cấp'}
+    - Ngày sinh: ${formData.birthday || 'Chưa cung cấp'}
     - Giới tính: ${formData.gender ? GENDER[formData.gender] : 'Chưa cung cấp'}
     - Mục tiêu: ${formData.lookingFor ? LOOKING_FOR[formData.lookingFor] : 'Chưa xác định'}
     
