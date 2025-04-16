@@ -67,15 +67,14 @@ export class AuthService {
         shortVideo: dto.shortVideo,
         preferredDistance: dto.preferredDistance, // JSON
       },
-    }); 
+    });
 
-
-     // Vector search với MongoDB Atlas
-     const pipeline = [
+    // Vector search với MongoDB Atlas
+    const pipeline = [
       {
         $vectorSearch: {
-          index: "user_embeddings",
-          path: "embeddings",
+          index: 'user_embeddings',
+          path: 'embeddings',
           queryVector: currentUser.embeddings,
           numCandidates: 100,
           limit: 10, // Over-fetch để filter thêm
@@ -96,15 +95,15 @@ export class AuthService {
           age: 1,
           gender: 1,
           score: {
-            $meta: "vectorSearchScore",
+            $meta: 'vectorSearchScore',
           },
         },
       },
     ];
-    
+
     const matches = await this.prisma.user.aggregateRaw({
-      pipeline
-    })
+      pipeline,
+    });
 
     return {
       id: currentUser.id,

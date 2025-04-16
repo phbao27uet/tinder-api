@@ -43,13 +43,31 @@ export class LlmService {
   );
 
   private async initEmbeddingModel() {
-    const TransformersApi = Function('return import("@xenova/transformers")')();
-    const { pipeline } = await TransformersApi;
+    try {
+      const TransformersApi = Function(
+        'return import("@xenova/transformers")',
+      )();
+      const { pipeline } = await TransformersApi;
 
-    this.embeddingModel = await pipeline(
-      'feature-extraction',
-      'Xenova/all-MiniLM-L6-v2',
-    );
+      // Use all-MiniLM-L6-v2 which produces 384-dimensional embeddings
+      this.embeddingModel = await pipeline(
+        'feature-extraction',
+        'Xenova/all-MiniLM-L6-v2',
+        {
+          revision: 'main',
+          quantized: false,
+        },
+      );
+      this.logger.log('Embedding model initialized successfully');
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to initialize embedding model: ${error.message}`,
+        error.stack,
+      );
+      throw new InternalServerErrorException(
+        'Could not initialize embedding model',
+      );
+    }
   }
 
   async processUserData(_formData: SignUpDto) {
@@ -68,8 +86,22 @@ export class LlmService {
       const combinedText = this.createCombinedText(formData);
 
       // Bước 3: Tạo embedding từ combined text
-      const embeddings = await this.embeddingModel(combinedText);
-      const embeddingArray = Array.from(embeddings[0].data);
+      const embeddings = await this.embeddingModel(combinedText, {
+        pooling: 'mean',
+        normalize: true,
+      });
+
+      // Ensure we're getting a flat array of numbers that matches the 384 dimensions
+      // specified in the MongoDB config
+      const embeddingArray = Array.from(embeddings.data);
+
+      // Validate embedding dimensions
+      if (embeddingArray.length !== 384) {
+        this.logger.error(
+          `Expected 384 dimensions but got ${embeddingArray.length}`,
+        );
+        throw new InternalServerErrorException('Invalid embedding dimensions');
+      }
 
       return {
         embeddings: embeddingArray as number[],

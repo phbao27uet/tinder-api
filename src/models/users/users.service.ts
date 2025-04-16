@@ -70,8 +70,8 @@ export class UserService {
     const users = await this.prisma.user.findMany({
       where: {
         id: {
-          not: id
-        }
+          not: id,
+        },
       },
       select: {
         id: true,
@@ -97,58 +97,72 @@ export class UserService {
         diet: true,
         socialMediaActivity: true,
         sleepHabit: true,
-      }
-    })
+      },
+    });
 
-    return users;
+    // return users;
 
     // Vector search với MongoDB Atlas
-    // const pipeline = [
-    //   {
-    //     $vectorSearch: {
-    //       index: "user_embeddings",
-    //       path: "embeddings",
-    //       queryVector: user.embeddings,
-    //       numCandidates: 100,
-    //       limit: 10, // Over-fetch để filter thêm
-    //     },
-    //   },
-    //   {
-    //     $match: {
-    //       _id: { $ne: user.id },
-    //       // Thêm các điều kiện khác từ searchSettings
-    //       // age: { $gte: currentUser.searchSettings?.minAge },
-    //       // gender: { $in: currentUser.preferences?.genders },
-    //     },
-    //   },
-    //   {
-    //     $project: { _id: 1, rawProfile: 1 },
-    //   },
-    // ];
-    
-    // const matches = await this.prisma.user.aggregateRaw({
-    //   pipeline
-    // })
+    const pipeline = [
+      {
+        $vectorSearch: {
+          index: 'user_embeddings',
+          path: 'embeddings',
+          queryVector: user.embeddings,
+          numCandidates: 100,
+          limit: 10, // Over-fetch để filter thêm
+        },
+      },
+      {
+        $match: {
+          _id: { $ne: user.id },
+          // Thêm các điều kiện khác từ searchSettings
+          // age: { $gte: currentUser.searchSettings?.minAge },
+          // gender: { $in: currentUser.preferences?.genders },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          rawProfile: 1,
+          name: 1,
+          email: 1,
+          gender: 1,
+          images: 1,
+          // embeddings: 1,
+          birthday: 1,
+          interests: 1,
+          languages: 1,
+          updatedAt: 1,
+          createdAt: 1,
+          address: 1,
+          lat: 1,
+          lng: 1,
+          distance: 1,
+          zodiacSign: 1,
+          education: 1,
+          futureFamily: 1,
+          communicationStyle: 1,
+          loveLanguage: 1,
+          pet: 1,
+          alcoholConsumption: 1,
+          smoking: 1,
+          exerciseHabit: 1,
+          diet: 1,
+          socialMediaActivity: 1,
+          sleepHabit: 1,
+        },
+      },
+    ];
 
-    // const matchesCmd = await this.prisma.$runCommandRaw({
-    //   aggregate: 'User',
-    //   pipeline: [
-    //     {
-    //       $vectorSearch: {
-    //         index: 'user_embeddings',
-    //         path: 'embeddings',
-    //         queryVector: user.embeddings,
-    //         limit: 20,
-    //         numCandidates: 100,
-    //       },
-    //     },
-    //     { $match: { _id: { $ne: user.id } } },
-    //     { $project: { _id: 1, rawProfile: 1 } },
-    //   ],
-    // });
+    const matches = await this.prisma.user.aggregateRaw({
+      pipeline,
+      options: {
+        cursor: { batchSize: 100 },
+      },
+    });
 
-
-    // return {matches, matchesCmd};
+    return { matches };
   }
 
   async update(id: string, updateDto: UpdateUserDto) {
