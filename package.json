@@ -44,7 +44,7 @@
     "body-parser": "^1.20.3",
     "date-fns": "^3.6.0",
     "firebase-admin": "^13.2.0",
-    "langchain": "^0.3.15",
+    "langchain": "^0.3.22",
     "lodash": "^4.17.21",
     "nestjs-zod": "^3.0.0",
     "openai": "^4.83.0",

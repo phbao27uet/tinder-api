@@ -11,6 +11,7 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Controller('auth')
 export class AuthController {
+  // eslint-disable-next-line prettier/prettier
   constructor(private authService: AuthService) { }
 
   @Post('login')

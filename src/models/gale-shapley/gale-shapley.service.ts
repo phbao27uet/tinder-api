@@ -1,6 +1,6 @@
 // gale-shapley.service.ts
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { Preference, Prisma, User as PrismaUser } from '@prisma/client';
+import { Preference, Prisma } from '@prisma/client';
 import { PrismaService } from '@shared/prisma/prisma.service';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { LlmService, IUserMatch } from '@models/llm/llm.service';
@@ -78,7 +78,7 @@ export class GaleShapleyService {
   async runMatching() {
     try {
       this.logger.log('Bắt đầu quá trình matching cho người dùng');
-      
+
       // Lấy tất cả người dùng có bao gồm dữ liệu preferences
       const allUsers = await this.prisma.user.findMany({
         include: {
@@ -92,23 +92,30 @@ export class GaleShapleyService {
           user.preferences.length > 0 &&
           user.preferences[0].preferredOrder.length > 0,
       );
-      
-      this.logger.log(`Tìm thấy ${usersWithPreferences.length} người dùng có dữ liệu preference hợp lệ`);
-      
+
+      this.logger.log(
+        `Tìm thấy ${usersWithPreferences.length} người dùng có dữ liệu preference hợp lệ`,
+      );
+
       // Tìm người dùng không có preferredOrder hoặc preferredOrder rỗng
       const usersWithoutPreferences = allUsers.filter(
         (user) =>
           user.preferences.length === 0 ||
           user.preferences[0].preferredOrder.length === 0,
       );
-      
-      this.logger.log(`Cần tính toán preferences cho ${usersWithoutPreferences.length} người dùng`);
-      
+
+      this.logger.log(
+        `Cần tính toán preferences cho ${usersWithoutPreferences.length} người dùng`,
+      );
+
       // Tính toán preferences cho người dùng chưa có
       if (usersWithoutPreferences.length > 0) {
-        await this.calculateAndSavePreferences(usersWithoutPreferences, allUsers);
+        await this.calculateAndSavePreferences(
+          usersWithoutPreferences,
+          allUsers,
+        );
       }
-      
+
       // Lấy lại danh sách người dùng sau khi đã tính toán preferences
       const validUsers = await this.prisma.user.findMany({
         where: {
@@ -116,16 +123,18 @@ export class GaleShapleyService {
             some: {
               preferredOrder: {
                 isEmpty: false,
-              }
-            }
-          }
+              },
+            },
+          },
         },
         include: {
           preferences: true,
         },
       });
-      
-      this.logger.log(`Sau khi tính toán: ${validUsers.length} người dùng có dữ liệu preference hợp lệ`);
+
+      this.logger.log(
+        `Sau khi tính toán: ${validUsers.length} người dùng có dữ liệu preference hợp lệ`,
+      );
 
       // Phân chia người dùng thành hai nhóm theo giới tính để áp dụng thuật toán Gale-Shapley
       // Trong Gale-Shapley, cần có hai nhóm: nhóm đề xuất (proposers) và nhóm xem xét (reviewers)
@@ -138,8 +147,10 @@ export class GaleShapleyService {
         return;
       }
 
-      this.logger.log(`Áp dụng thuật toán Gale-Shapley với ${proposers.length} proposers và ${reviewers.length} reviewers`);
-      
+      this.logger.log(
+        `Áp dụng thuật toán Gale-Shapley với ${proposers.length} proposers và ${reviewers.length} reviewers`,
+      );
+
       // Chạy thuật toán Gale-Shapley để tìm các cặp ghép ổn định
       const matches = this.galeShapleyAlgorithm(proposers, reviewers);
 
@@ -159,7 +170,7 @@ export class GaleShapleyService {
    */
   private async saveMatchesToDatabase(matches: Map<string, User>) {
     this.logger.log(`Lưu ${matches.size} cặp ghép vào cơ sở dữ liệu`);
-    
+
     // Sử dụng transaction để đảm bảo tất cả các bản ghi được tạo hoặc không có bản ghi nào được tạo
     await this.prisma.$transaction(
       Array.from(matches.entries()).map(([reviewerId, proposer]) =>
@@ -183,15 +194,15 @@ export class GaleShapleyService {
 
   /**
    * Triển khai thuật toán Gale-Shapley (còn gọi là thuật toán stable matching)
-   * 
+   *
    * Thuật toán Gale-Shapley hoạt động như sau:
    * 1. Ban đầu, tất cả proposers đều tự do (chưa được ghép đôi)
    * 2. Mỗi proposer sẽ đề xuất ghép đôi với reviewer họ ưa thích nhất mà họ chưa từng đề xuất
    * 3. Nếu reviewer chưa được ghép đôi, họ chấp nhận đề xuất
-   * 4. Nếu reviewer đã được ghép đôi, họ sẽ so sánh người đang ghép đôi với họ và người mới 
+   * 4. Nếu reviewer đã được ghép đôi, họ sẽ so sánh người đang ghép đôi với họ và người mới
    *    đề xuất, và chọn người họ ưa thích hơn
    * 5. Quá trình này tiếp tục cho đến khi không còn proposer tự do hoặc không còn đề xuất nào để thực hiện
-   * 
+   *
    * @param proposers Danh sách người dùng nhóm đề xuất (proposer)
    * @param reviewers Danh sách người dùng nhóm xem xét (reviewer)
    * @returns Map chứa các cặp ghép ổn định (reviewerId -> proposer)
@@ -202,7 +213,7 @@ export class GaleShapleyService {
   ): Map<string, User> {
     // Map lưu trữ kết quả các cặp ghép: reviewerId -> proposer
     const matches = new Map<string, User>();
-    
+
     // Danh sách các proposer chưa được ghép cặp
     const freeProposers = [...proposers];
 
@@ -227,13 +238,13 @@ export class GaleShapleyService {
 
       // Lấy reviewer ưa thích nhất tiếp theo của proposer
       const reviewerId = proposerPrefs.preferredOrder[0];
-      
+
       // Loại bỏ reviewer này khỏi danh sách ưa thích (để không đề xuất lại)
       proposerPrefs.preferredOrder.shift();
-      
+
       // Lấy thông tin preference của reviewer
       const reviewerPrefs = preferenceCache.get(reviewerId);
-      
+
       // Nếu không tìm thấy preference của reviewer, bỏ qua
       if (!reviewerPrefs) {
         continue;
@@ -247,7 +258,7 @@ export class GaleShapleyService {
       } else {
         // Nếu reviewer đã được ghép đôi, so sánh với proposer hiện tại
         const currentMatch = matches.get(reviewerId)!;
-        
+
         // Lấy điểm ưa thích của reviewer đối với các proposers
         const currentScore = reviewerPrefs.scoreMap.get(currentMatch.id) || 0;
         const newScore = reviewerPrefs.scoreMap.get(proposer.id) || 0;
@@ -281,20 +292,20 @@ export class GaleShapleyService {
     for (const user of [...proposers, ...reviewers]) {
       // Chỉ xử lý người dùng có preferences
       if (user.preferences.length === 0) continue;
-      
+
       const preference = user.preferences[0];
       // Nếu không có preferredOrder, bỏ qua
       if (!preference.preferredOrder || !preference.similarityScores) continue;
-      
+
       // Map lưu trữ điểm số của mỗi người dùng trong preferredOrder
       const scoreMap = new Map<string, number>();
 
       // Đảm bảo độ dài của preferredOrder và similarityScores khớp nhau
       const minLength = Math.min(
         preference.preferredOrder.length,
-        preference.similarityScores.length
+        preference.similarityScores.length,
       );
-      
+
       // Lưu trữ điểm số cho mỗi người dùng trong preferredOrder
       for (let i = 0; i < minLength; i++) {
         const userId = preference.preferredOrder[i];
@@ -315,7 +326,7 @@ export class GaleShapleyService {
    * Tính điểm ổn định (stability) của một cặp ghép
    * Độ ổn định là thước đo mức độ hài lòng của cả hai người trong cặp ghép
    * và khả năng họ sẽ không muốn rời bỏ nhau để ghép đôi với người khác
-   * 
+   *
    * @param proposer Người dùng proposer
    * @param reviewerId ID của reviewer
    * @param matches Map chứa tất cả các cặp ghép
@@ -328,7 +339,7 @@ export class GaleShapleyService {
   ): number {
     // Điểm ổn định ban đầu là 100 (tối đa)
     let stabilityScore = 100;
-    
+
     // Lấy preferences của cả proposer và reviewer
     const proposerPrefs = proposer.preferences[0];
     const reviewerPrefs = this.getPreferences(reviewerId);
@@ -344,7 +355,7 @@ export class GaleShapleyService {
       proposerPrefs,
       reviewerId,
     );
-    
+
     // Điểm tương đồng tối đa có thể có
     const maxPossibleScore = Math.max(...proposerPrefs.similarityScores);
 
@@ -392,7 +403,7 @@ export class GaleShapleyService {
         proposerPrefs,
         reviewerId,
       );
-      
+
       // Kiểm tra xem proposer có thích reviewer khác hơn reviewer hiện tại không
       const proposerPrefersOther =
         this.getScoreFromPreference(proposerPrefs, otherReviewerId) >
@@ -429,46 +440,60 @@ export class GaleShapleyService {
     });
     return user?.preferences[0] || null;
   }
-  
+
   /**
    * Tính toán và lưu preferences cho danh sách người dùng chưa có preferences
    * @param users Danh sách người dùng cần tính toán preferences
    * @param allUsers Tất cả người dùng trong hệ thống
    */
   private async calculateAndSavePreferences(users: User[], allUsers: User[]) {
-    this.logger.log(`Bắt đầu tính toán preferences cho ${users.length} người dùng`);
-    
+    this.logger.log(
+      `Bắt đầu tính toán preferences cho ${users.length} người dùng`,
+    );
+
     // Xử lý từng người dùng
     for (const user of users) {
       try {
         // Chọn các ứng viên phù hợp dựa trên criteria của người dùng
         const potentialMatches = this.findPotentialMatches(user, allUsers);
-        
+
         if (potentialMatches.length === 0) {
-          this.logger.warn(`Không tìm thấy ứng viên phù hợp cho người dùng ${user.id}`);
+          this.logger.warn(
+            `Không tìm thấy ứng viên phù hợp cho người dùng ${user.id}`,
+          );
           continue;
         }
-        
-        this.logger.log(`Tìm thấy ${potentialMatches.length} ứng viên tiềm năng cho người dùng ${user.id}`);
-        
+
+        this.logger.log(
+          `Tìm thấy ${potentialMatches.length} ứng viên tiềm năng cho người dùng ${user.id}`,
+        );
+
         // Chuyển đổi từ User sang IUserMatch để sử dụng với LlmService
         const convertedMatches = potentialMatches.map(this.convertToIUserMatch);
-        
+
         // Sử dụng AI để phân tích mức độ tương thích
-        const analysisResults = await this.llmService.analyzeMatchesWithAI(user, convertedMatches);
-        
+        const analysisResults = await this.llmService.analyzeMatchesWithAI(
+          user,
+          convertedMatches,
+        );
+
         // Lưu preferences vào database
         await this.saveUserPreferences(user.id, analysisResults);
-        
-        this.logger.log(`Đã tính toán và lưu preferences cho người dùng ${user.id}`);
-      
-        await new Promise(resolve => setTimeout(resolve, 5000));
+
+        this.logger.log(
+          `Đã tính toán và lưu preferences cho người dùng ${user.id}`,
+        );
+
+        await new Promise((resolve) => setTimeout(resolve, 5000));
       } catch (error) {
-        this.logger.error(`Lỗi khi tính toán preferences cho người dùng ${user.id}:`, error);
+        this.logger.error(
+          `Lỗi khi tính toán preferences cho người dùng ${user.id}:`,
+          error,
+        );
       }
     }
   }
-  
+
   /**
    * Tìm các ứng viên tiềm năng phù hợp với criteria của người dùng
    * @param user Người dùng cần tìm match
@@ -476,21 +501,23 @@ export class GaleShapleyService {
    * @returns Danh sách ứng viên tiềm năng
    */
   private findPotentialMatches(user: User, allUsers: User[]): User[] {
-    return allUsers.filter(potentialMatch => {
+    return allUsers.filter((potentialMatch) => {
       // Bỏ qua chính người dùng
       if (potentialMatch.id === user.id) return false;
-      
+
       // Lọc theo giới tính (đơn giản hóa, có thể mở rộng theo lookingFor)
-      if (user.gender === 'MALE' && potentialMatch.gender !== 'FEMALE') return false;
-      if (user.gender === 'FEMALE' && potentialMatch.gender !== 'MALE') return false;
-      
+      if (user.gender === 'MALE' && potentialMatch.gender !== 'FEMALE')
+        return false;
+      if (user.gender === 'FEMALE' && potentialMatch.gender !== 'MALE')
+        return false;
+
       // Lọc theo khoảng cách (nếu có)
       // Có thể bổ sung thêm các tiêu chí lọc khác ở đây
-      
+
       return true;
     });
   }
-  
+
   /**
    * Chuyển đổi từ User sang IUserMatch để sử dụng với LlmService
    * @param user Người dùng cần chuyển đổi
@@ -519,21 +546,28 @@ export class GaleShapleyService {
       exerciseHabit: user.exerciseHabit?.toString() || '',
       diet: user.diet?.toString() || '',
       socialMediaActivity: user.socialMediaActivity?.toString() || '',
-      sleepHabit: user.sleepHabit?.toString() || ''
+      sleepHabit: user.sleepHabit?.toString() || '',
     };
   }
-  
+
   /**
    * Lưu kết quả phân tích AI vào bảng preferences
    * @param userId ID của người dùng
    * @param analysisResults Kết quả phân tích từ AI
    */
-  private async saveUserPreferences(userId: string, analysisResults: { preferredOrder: string[], similarityScores: number[], details: any[] }) {
+  private async saveUserPreferences(
+    userId: string,
+    analysisResults: {
+      preferredOrder: string[];
+      similarityScores: number[];
+      details: any[];
+    },
+  ) {
     // Kiểm tra xem người dùng đã có preference chưa
     const existingPreference = await this.prisma.preference.findFirst({
-      where: { userId }
+      where: { userId },
     });
-    
+
     if (existingPreference) {
       // Cập nhật preference hiện có
       await this.prisma.preference.update({
@@ -542,12 +576,14 @@ export class GaleShapleyService {
           preferredOrder: analysisResults.preferredOrder,
           similarityScores: analysisResults.similarityScores,
           // Lưu chi tiết vào cột lastUpdated dưới dạng Date
-          lastUpdated: new Date()
-        }
+          lastUpdated: new Date(),
+        },
       });
-      
+
       // Lưu chi tiết phân tích vào bảng riêng nếu cần
-      this.logger.log(`Đã cập nhật preferences cho userId: ${userId} với ${analysisResults.preferredOrder.length} preferredOrder`);
+      this.logger.log(
+        `Đã cập nhật preferences cho userId: ${userId} với ${analysisResults.preferredOrder.length} preferredOrder`,
+      );
     } else {
       // Tạo preference mới
       await this.prisma.preference.create({
@@ -555,11 +591,13 @@ export class GaleShapleyService {
           userId,
           preferredOrder: analysisResults.preferredOrder,
           similarityScores: analysisResults.similarityScores,
-          lastUpdated: new Date()
-        }
+          lastUpdated: new Date(),
+        },
       });
-      
-      this.logger.log(`Đã tạo mới preferences cho userId: ${userId} với ${analysisResults.preferredOrder.length} preferredOrder`);
+
+      this.logger.log(
+        `Đã tạo mới preferences cho userId: ${userId} với ${analysisResults.preferredOrder.length} preferredOrder`,
+      );
     }
   }
 
@@ -592,45 +630,59 @@ export class GaleShapleyService {
     });
 
     if (!user) {
-      throw new NotFoundException(`Không tìm thấy người dùng với ID: ${userId}`);
+      throw new NotFoundException(
+        `Không tìm thấy người dùng với ID: ${userId}`,
+      );
     }
 
     // Lấy preferences của người dùng
     const userPreference = user.preferences[0];
-    
+
     // Nếu chưa có preferences, cần tính toán trước
     if (!userPreference || userPreference.preferredOrder.length === 0) {
-      this.logger.log(`Người dùng ${userId} chưa có preferences, tiến hành tính toán...`);
+      this.logger.log(
+        `Người dùng ${userId} chưa có preferences, tiến hành tính toán...`,
+      );
       // Lấy tất cả người dùng
       const allUsers = await this.prisma.user.findMany({
         include: { preferences: true },
       });
-      
+
       // Tính toán preferences
       await this.calculateAndSavePreferences([user], allUsers);
-      
+
       // Lấy lại người dùng với preferences đã được tính toán
       const updatedUser = await this.prisma.user.findUnique({
         where: { id: userId },
         include: { preferences: true },
       });
-      
+
       if (!updatedUser || !updatedUser.preferences[0]) {
-        throw new NotFoundException('Không thể tính toán preferences cho người dùng');
+        throw new NotFoundException(
+          'Không thể tính toán preferences cho người dùng',
+        );
       }
-      
+
       // Cập nhật userPreference
-      return this.getUserSuggestionsFromPreference(updatedUser, updatedUser.preferences[0], allUsers);
+      return this.getUserSuggestionsFromPreference(
+        updatedUser,
+        updatedUser.preferences[0],
+        allUsers,
+      );
     }
-    
+
     // Lấy tất cả người dùng để lọc theo preferredOrder
     const allUsers = await this.prisma.user.findMany({
       include: { preferences: true },
     });
-    
-    return this.getUserSuggestionsFromPreference(user, userPreference, allUsers);
+
+    return this.getUserSuggestionsFromPreference(
+      user,
+      userPreference,
+      allUsers,
+    );
   }
-  
+
   /**
    * Lấy danh sách gợi ý từ preference đã có
    * @param user Người dùng hiện tại
@@ -644,29 +696,29 @@ export class GaleShapleyService {
     allUsers: User[],
   ): UserSuggestion[] {
     const suggestions: UserSuggestion[] = [];
-    
+
     // Lấy danh sách userIds từ preferredOrder
     const { preferredOrder, similarityScores } = preference;
-    
+
     // Tạo map để tra cứu nhanh
     const userMap = new Map<string, User>();
-    allUsers.forEach(u => userMap.set(u.id, u));
-    
+    allUsers.forEach((u) => userMap.set(u.id, u));
+
     // Chuyển đổi preferredOrder thành danh sách gợi ý
     for (let i = 0; i < preferredOrder.length; i++) {
       const suggestedUserId = preferredOrder[i];
       const suggestedUser = userMap.get(suggestedUserId);
-      
+
       if (suggestedUser) {
         // Bỏ qua nếu là chính người dùng đang xem
         if (suggestedUser.id === user.id) continue;
-        
+
         // Kiểm tra tiêu chí phù hợp (giới tính, v.v.)
         if (!this.matchesCriteria(user, suggestedUser)) continue;
-        
+
         // Điểm tương đồng
         const similarityScore = similarityScores[i];
-        
+
         // Thêm vào danh sách gợi ý
         suggestions.push({
           id: suggestedUser.id,
@@ -681,11 +733,13 @@ export class GaleShapleyService {
             communicationStyle: suggestedUser.communicationStyle || undefined,
             loveLanguage: suggestedUser.loveLanguage || undefined,
             pet: suggestedUser.pet?.toString() || undefined,
-            alcoholConsumption: suggestedUser.alcoholConsumption?.toString() || undefined,
+            alcoholConsumption:
+              suggestedUser.alcoholConsumption?.toString() || undefined,
             smoking: suggestedUser.smoking?.toString() || undefined,
             exerciseHabit: suggestedUser.exerciseHabit?.toString() || undefined,
             diet: suggestedUser.diet?.toString() || undefined,
-            socialMediaActivity: suggestedUser.socialMediaActivity?.toString() || undefined,
+            socialMediaActivity:
+              suggestedUser.socialMediaActivity?.toString() || undefined,
             sleepHabit: suggestedUser.sleepHabit?.toString() || undefined,
             lookingFor: suggestedUser.lookingFor || undefined,
             rawProfile: suggestedUser.rawProfile || undefined,
@@ -693,10 +747,10 @@ export class GaleShapleyService {
         });
       }
     }
-    
+
     return suggestions;
   }
-  
+
   /**
    * Kiểm tra một người dùng có phù hợp với tiêu chí của người dùng khác không
    * @param user Người dùng chính
@@ -705,11 +759,13 @@ export class GaleShapleyService {
    */
   private matchesCriteria(user: User, potentialMatch: User): boolean {
     // Kiểm tra giới tính
-    if (user.gender === 'MALE' && potentialMatch.gender !== 'FEMALE') return false;
-    if (user.gender === 'FEMALE' && potentialMatch.gender !== 'MALE') return false;
-    
+    if (user.gender === 'MALE' && potentialMatch.gender !== 'FEMALE')
+      return false;
+    if (user.gender === 'FEMALE' && potentialMatch.gender !== 'MALE')
+      return false;
+
     // Có thể bổ sung thêm các tiêu chí khác ở đây như khoảng cách, độ tuổi, v.v.
-    
+
     return true;
   }
 }

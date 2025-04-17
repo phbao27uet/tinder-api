@@ -8,19 +8,19 @@ generator client {
 }
 
 model User {
-  id           String   @id @default(auto()) @map("_id") @db.ObjectId
-  email        String   @unique
-  password     String
-  role         Role
-  images       String[]
-  shortVideo   String?
-  refreshToken String?
-  name         String?
-  birthday     DateTime?
-  gender       Gender?
+  id                String    @id @default(auto()) @map("_id") @db.ObjectId
+  email             String    @unique
+  password          String
+  role              Role
+  images            String[]
+  shortVideo        String?
+  refreshToken      String?
+  name              String?
+  birthday          DateTime?
+  gender            Gender?
   // location     Json? // GeoJSON format for geospatial queries
   preferredDistance Int?
-  
+
   // LLM
   rawProfile String? // Raw text input by user
   interests  Interest[]
@@ -53,6 +53,8 @@ model User {
   swipers        Swipe[]         @relation("swiper")
   targetUsers    Swipe[]         @relation("targetUser")
   searchSettings SearchSetting[]
+
+  lastIndexed DateTime? @default(now())
 }
 
 model SearchSetting {
@@ -80,12 +82,19 @@ model Swipe {
   createdAt    DateTime  @default(now())
 }
 
+enum MatchStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
 model Match {
-  id             String   @id @default(auto()) @map("_id") @db.ObjectId
-  userIDs        String[] @db.ObjectId
-  users          User[]   @relation(fields: [userIDs], references: [id])
-  matchedAt      DateTime @default(now())
+  id             String      @id @default(auto()) @map("_id") @db.ObjectId
+  userIDs        String[]    @db.ObjectId
+  users          User[]      @relation(fields: [userIDs], references: [id])
+  matchDate      DateTime    @default(now())
   stabilityScore Float? // Score from Gale-Shapley algorithm
+  status         MatchStatus @default(PENDING)
 }
 
 model Preference {
@@ -93,6 +102,7 @@ model Preference {
   userId           String   @db.ObjectId
   preferredOrder   String[] // Array of user IDs
   similarityScores Float[] // Array of similarity scores for each userID
+  priorityFactors  String[] // Array of priority factors
   lastUpdated      DateTime @default(now())
   user             User     @relation(fields: [userId], references: [id])
 }

@@ -71,7 +71,7 @@ export class UserService {
       throw new Error('User not found');
     }
 
-    // Vector search với MongoDB Atlas
+    // Vector search with MongoDB Atlas
     const pipeline = [
       {
         $vectorSearch: {
