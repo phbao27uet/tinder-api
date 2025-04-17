@@ -1,14 +1,17 @@
 /* eslint-disable prettier/prettier */
 import { DefaultFindAllQueryDto } from '@models/base/dto';
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, User } from '@prisma/client';
 import { PrismaService } from 'src/shared/prisma/prisma.service';
 import { ChangePasswordDto, UpdateUserDto } from './dto/update-user.dto';
 import { hashPassword } from '@shared/utils';
+import { LlmService } from '@models/llm/llm.service';
 
 @Injectable()
 export class UserService {
-  constructor(private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService,
+    private llmService: LlmService
+  ) { }
 
   async findAll(defaultFindAllQuery: DefaultFindAllQueryDto) {
     const {
@@ -95,7 +98,7 @@ export class UserService {
           email: 1,
           gender: 1,
           images: 1,
-          // embeddings: 1,
+          embeddings: 1,
           birthday: 1,
           interests: 1,
           languages: 1,
@@ -105,7 +108,7 @@ export class UserService {
           lat: 1,
           lng: 1,
           distance: 1,
-          zodiacSign: 1,
+          zodiac: 1,
           education: 1,
           futureFamily: 1,
           communicationStyle: 1,
@@ -128,7 +131,12 @@ export class UserService {
       },
     });
 
-    return { matches };
+    const analyzedMatches = await this.llmService.analyzeMatchesWithAI(
+      user,
+      matches as unknown as User[]
+    );
+
+    return { matches, analyzedMatches };
   }
 
   async update(id: string, updateDto: UpdateUserDto) {

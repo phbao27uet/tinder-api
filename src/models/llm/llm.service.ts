@@ -24,6 +24,7 @@ import {
   SOCIAL_MEDIA_USAGE,
   ZODIAC_SIGN,
 } from '@shared/utils';
+import { User } from '@prisma/client';
 
 @Injectable()
 export class LlmService {
@@ -183,5 +184,267 @@ export class LlmService {
       this.logger.error('Lỗi phân tích phản hồi từ Gemini', err.stack);
       throw new InternalServerErrorException('Lỗi xử lý dữ liệu AI');
     }
+  }
+
+  /**
+   * Phân tích mức độ tương thích giữa userProfile và các matches sử dụng Gemini API
+   * và chuẩn bị dữ liệu cho thuật toán Gale-Shapley
+   */
+  async analyzeMatchesWithAI(userProfile: User, matches: User[]) {
+    try {
+      // Kiểm tra embedding của userProfile
+      if (!userProfile.embeddings || userProfile.embeddings.length !== 384) {
+        throw new InternalServerErrorException(
+          'User profile chưa có embeddings hợp lệ',
+        );
+      }
+
+      // Lọc các matches có embedding hợp lệ
+      const validMatches = matches.filter(
+        (m) => Array.isArray(m.embeddings) && m.embeddings.length === 384,
+      );
+      if (validMatches.length === 0) {
+        throw new InternalServerErrorException(
+          'Không có matches nào có embeddings hợp lệ',
+        );
+      }
+
+      // Bước 1: Tính base compatibility scores dựa trên cosine similarity
+      const baseResults = validMatches.map((m) => {
+        const score = this.cosineSimilarity(
+          userProfile.embeddings,
+          m.embeddings,
+        );
+        return {
+          match: m,
+          matchId: m.id,
+          compatibilityScore: score,
+        };
+      });
+
+      // Bước 2: Sử dụng Gemini để phân tích sâu hơn về tương thích
+      const enhancedResults = await this.enhanceMatchesWithGemini(
+        userProfile,
+        baseResults,
+      );
+
+      // Bước 3: Tổng hợp kết quả từ cả embedding và Gemini
+      const finalResults = this.combineResults(baseResults, enhancedResults);
+
+      // Bước 4: Chuẩn hóa output cho Gale-Shapley
+      const preferredOrder = finalResults.map((r) => r.matchId);
+      const similarityScores = finalResults.map((r) => r.compatibilityScore);
+
+      return {
+        preferredOrder,
+        similarityScores,
+        details: finalResults, // Thông tin chi tiết bao gồm cả lý do
+      };
+    } catch (error: any) {
+      this.logger.error(
+        `Lỗi khi phân tích matches với AI: ${error.message}`,
+        error.stack,
+      );
+      throw new InternalServerErrorException(
+        'Lỗi khi phân tích matches với AI',
+      );
+    }
+  }
+
+  /**
+   * Hàm tính cosine similarity giữa hai vector embedding
+   */
+  private cosineSimilarity(a: number[], b: number[]): number {
+    const dot = a.reduce((acc, val, i) => acc + val * b[i], 0);
+    const normA = Math.sqrt(a.reduce((acc, val) => acc + val ** 2, 0));
+    const normB = Math.sqrt(b.reduce((acc, val) => acc + val ** 2, 0));
+    if (normA === 0 || normB === 0) return 0;
+    // Chuẩn hóa về [0, 1] thay vì [-1, 1]
+    return (dot / (normA * normB) + 1) / 2;
+  }
+
+  /**
+   * Tạo chuỗi biểu diễn người dùng dưới dạng text để phân tích
+   */
+  private createUserText(user: User): string {
+    return `
+      User ID: ${user.id}
+      Name: ${user.name || 'Unknown'}
+      Gender: ${user.gender || 'Unknown'}
+      Birthday: ${user.birthday ? user.birthday.toISOString().split('T')[0] : 'Unknown'}
+      Raw Profile: ${user.rawProfile || ''}
+      Interests: ${user.interests?.join(', ') || ''}
+      Languages: ${user.languages?.join(', ') || ''}
+      Zodiac: ${user.zodiac || 'Unknown'}
+      Education: ${user.education || 'Unknown'}
+      Future Family Plans: ${user.futureFamily || 'Unknown'}
+      Communication Style: ${user.communicationStyle || 'Unknown'}
+      Love Language: ${user.loveLanguage || 'Unknown'}
+      Pets: ${user.pet || 'Unknown'}
+      Alcohol Consumption: ${user.alcoholConsumption || 'Unknown'}
+      Smoking: ${user.smoking || 'Unknown'}
+      Exercise Habits: ${user.exerciseHabit || 'Unknown'}
+      Diet: ${user.diet || 'Unknown'}
+      Social Media Activity: ${user.socialMediaActivity || 'Unknown'}
+      Sleep Habits: ${user.sleepHabit || 'Unknown'}
+    `;
+  }
+
+  /**
+   * Sử dụng Gemini để phân tích sâu hơn về tương thích giữa userProfile và matches
+   */
+  private async enhanceMatchesWithGemini(
+    userProfile: User,
+    baseResults: Array<{
+      match: User;
+      matchId: string;
+      compatibilityScore: number;
+    }>,
+  ) {
+    // Khởi tạo Gemini model
+    const model = this.gemini.getGenerativeModel({ model: 'gemini-1.5-pro' });
+
+    // Phân tích từng match với Gemini
+    const enhancedResults: any[] = [];
+    for (const { match, matchId } of baseResults) {
+      // Tạo thông tin người dùng dưới dạng text
+      const userProfileText = this.createUserText(userProfile);
+      const matchProfileText = this.createUserText(match);
+
+      // Xây dựng prompt cho Gemini
+      const prompt = `
+        Bạn là chuyên gia phân tích tâm lý và tương thích giữa hai người. Hãy phân tích mức độ tương thích dựa trên thông tin của họ.
+        
+        THÔNG TIN NGƯỜI DÙNG 1:
+${userProfileText}
+
+        THÔNG TIN NGƯỜI DÙNG 2:
+${matchProfileText}
+
+        
+        Hãy phân tích mức độ tương thích giữa hai người dùng trên theo các tiêu chí:
+        1. Sở thích và hoạt động chung
+        2. Giá trị sống và mục tiêu tương lai
+        3. Thói quen và lối sống
+        4. Phong cách giao tiếp và ngôn ngữ tình yêu
+        
+        Trả về kết quả dưới dạng JSON với format sau:
+        {
+          "compatibilityScore": <số từ 0 đến 1, càng gần 1 càng tương thích>,
+          "reasons": ["lý do 1", "lý do 2", "lý do 3"],
+          "incompatibilities": ["điểm không tương thích 1", "điểm không tương thích 2"]
+        }
+        
+        Chỉ trả về JSON, không thêm bất kỳ văn bản nào khác.
+      `;
+
+      try {
+        // Gọi Gemini để phân tích
+        const result = await model.generateContent(prompt);
+        const text = result.response.text();
+
+        // Phân tích kết quả và chuyển thành JSON
+        try {
+          // Làm sạch response để đảm bảo có thể parse được
+          const cleanText = text
+            .replace(/```json/g, '')
+            .replace(/```/g, '')
+            .trim();
+          const analysisResult = JSON.parse(cleanText);
+
+          enhancedResults.push({
+            matchId,
+            compatibilityScore: analysisResult.compatibilityScore || 0.5,
+            reasons: analysisResult.reasons || [],
+            incompatibilities: analysisResult.incompatibilities || [],
+          });
+        } catch (error: any) {
+          this.logger.warn(
+            `Không thể phân tích kết quả JSON từ Gemini cho match ${matchId}: ${error.message}`,
+          );
+          enhancedResults.push({
+            matchId,
+            compatibilityScore: 0.5, // Giá trị mặc định
+            reasons: ['Không thể phân tích chi tiết từ Gemini'],
+            incompatibilities: [],
+          });
+        }
+      } catch (error: any) {
+        this.logger.warn(
+          `Lỗi khi gọi Gemini cho match ${matchId}: ${error.message}`,
+        );
+        enhancedResults.push({
+          matchId,
+          compatibilityScore: 0.5, // Giá trị mặc định
+          reasons: ['Không thể kết nối với Gemini'],
+          incompatibilities: [],
+        });
+      }
+    }
+
+    return enhancedResults;
+  }
+
+  /**
+   * Kết hợp kết quả từ phân tích embedding và Gemini
+   */
+  private combineResults(
+    baseResults: Array<{
+      match: User;
+      matchId: string;
+      compatibilityScore: number;
+    }>,
+    enhancedResults: Array<{
+      matchId: string;
+      compatibilityScore: number;
+      reasons: string[];
+      incompatibilities: string[];
+    }>,
+  ) {
+    // Tạo map để dễ truy xuất enhancedResults
+    const enhancedMap = new Map(
+      enhancedResults.map((result) => [result.matchId, result]),
+    );
+
+    // Kết hợp kết quả
+    const combinedResults = baseResults.map(
+      ({ match, matchId, compatibilityScore }) => {
+        const enhanced = enhancedMap.get(matchId);
+
+        // Nếu có kết quả từ Gemini, kết hợp với kết quả từ embedding
+        if (enhanced) {
+          // Tính điểm trung bình giữa embedding và Gemini (có thể điều chỉnh trọng số)
+          const weightEmbedding = 0.4; // Trọng số cho phương pháp embedding
+          const weightGemini = 0.6; // Trọng số cho phân tích của Gemini
+          const combinedScore =
+            compatibilityScore * weightEmbedding +
+            enhanced.compatibilityScore * weightGemini;
+
+          return {
+            match,
+            matchId,
+            compatibilityScore: combinedScore,
+            reasons: enhanced.reasons,
+            incompatibilities: enhanced.incompatibilities,
+          };
+        }
+
+        // Nếu không có kết quả từ Gemini, giữ nguyên kết quả từ embedding
+        return {
+          match,
+          matchId,
+          compatibilityScore,
+          reasons: [
+            `Điểm tương đồng dựa trên vector embedding: ${compatibilityScore.toFixed(3)}`,
+          ],
+          incompatibilities: [],
+        };
+      },
+    );
+
+    // Sắp xếp theo compatibilityScore giảm dần
+    combinedResults.sort((a, b) => b.compatibilityScore - a.compatibilityScore);
+
+    return combinedResults;
   }
 }
