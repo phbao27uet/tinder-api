@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import { DefaultFindAllQueryDto } from '@models/base/dto';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
@@ -67,41 +68,6 @@ export class UserService {
       throw new Error('User not found');
     }
 
-    const users = await this.prisma.user.findMany({
-      where: {
-        id: {
-          not: id,
-        },
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        images: true,
-        shortVideo: true,
-        birthday: true,
-        gender: true,
-        preferredDistance: true,
-        rawProfile: true,
-        interests: true,
-        lookingFor: true,
-        languages: true,
-        zodiac: true,
-        education: true,
-        communicationStyle: true,
-        pet: true,
-        alcoholConsumption: true,
-        smoking: true,
-        exerciseHabit: true,
-        diet: true,
-        socialMediaActivity: true,
-        sleepHabit: true,
-      },
-    });
-
-    // return users;
-
     // Vector search với MongoDB Atlas
     const pipeline = [
       {
@@ -115,7 +81,7 @@ export class UserService {
       },
       {
         $match: {
-          _id: { $ne: user.id },
+          _id: { $ne: { $oid: user.id } },
           // Thêm các điều kiện khác từ searchSettings
           // age: { $gte: currentUser.searchSettings?.minAge },
           // gender: { $in: currentUser.preferences?.genders },

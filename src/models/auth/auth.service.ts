@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import {
   BadRequestException,
   ForbiddenException,
@@ -14,7 +15,6 @@ import { CheckEmailDto, SignUpDto } from './dto/sign-up.dto';
 import { hashPassword, isPasswordValid } from '@shared/utils';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { LlmService } from '@models/llm/llm.service';
-import { Interest } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
