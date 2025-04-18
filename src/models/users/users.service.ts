@@ -1,11 +1,11 @@
 /* eslint-disable prettier/prettier */
 import { DefaultFindAllQueryDto } from '@models/base/dto';
 import { Injectable } from '@nestjs/common';
-import { Prisma, User } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/shared/prisma/prisma.service';
 import { ChangePasswordDto, UpdateUserDto } from './dto/update-user.dto';
 import { hashPassword } from '@shared/utils';
-import { LlmService } from '@models/llm/llm.service';
+import { IUserMatch, LlmService } from '@models/llm/llm.service';
 
 @Injectable()
 export class UserService {
@@ -107,7 +107,7 @@ export class UserService {
           address: 1,
           lat: 1,
           lng: 1,
-          distance: 1,
+          preferredDistance: 1,
           zodiac: 1,
           education: 1,
           futureFamily: 1,
@@ -120,6 +120,7 @@ export class UserService {
           diet: 1,
           socialMediaActivity: 1,
           sleepHabit: 1,
+          lookingFor: 1,
         },
       },
     ];
@@ -133,10 +134,10 @@ export class UserService {
 
     const analyzedMatches = await this.llmService.analyzeMatchesWithAI(
       user,
-      matches as unknown as User[]
+      matches as unknown as IUserMatch[]
     );
 
-    return { matches, analyzedMatches };
+    return {matches, user, analyzedMatches};
   }
 
   async update(id: string, updateDto: UpdateUserDto) {

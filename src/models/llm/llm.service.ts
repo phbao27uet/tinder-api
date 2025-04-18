@@ -26,6 +26,33 @@ import {
 } from '@shared/utils';
 import { User } from '@prisma/client';
 
+export interface IUserMatch {
+  _id: {
+    $oid: string;
+  };
+  email: string;
+  images: string[];
+  name: string;
+  gender: 'MALE' | 'FEMALE' | 'OTHER';
+  preferredDistance: number;
+  rawProfile: string;
+  interests: string[]; // Có thể tạo enum nếu bạn cần giới hạn giá trị
+  embeddings: number[];
+  lookingFor: string; // Có thể tạo enum nếu cần
+  languages: string[];
+  zodiac: string;
+  education: string;
+  communicationStyle: string;
+  loveLanguage: string;
+  pet: string;
+  alcoholConsumption: string;
+  smoking: string;
+  exerciseHabit: string;
+  diet: string;
+  socialMediaActivity: string;
+  sleepHabit: string;
+}
+
 @Injectable()
 export class LlmService {
   private embeddingModel: any;
@@ -190,7 +217,7 @@ export class LlmService {
    * Phân tích mức độ tương thích giữa userProfile và các matches sử dụng Gemini API
    * và chuẩn bị dữ liệu cho thuật toán Gale-Shapley
    */
-  async analyzeMatchesWithAI(userProfile: User, matches: User[]) {
+  async analyzeMatchesWithAI(userProfile: User, matches: IUserMatch[]) {
     try {
       // Kiểm tra embedding của userProfile
       if (!userProfile.embeddings || userProfile.embeddings.length !== 384) {
@@ -215,9 +242,10 @@ export class LlmService {
           userProfile.embeddings,
           m.embeddings,
         );
+
         return {
           match: m,
-          matchId: m.id,
+          matchId: m._id.$oid,
           compatibilityScore: score,
         };
       });
@@ -227,6 +255,9 @@ export class LlmService {
         userProfile,
         baseResults,
       );
+
+      console.log('enhancedResults', enhancedResults);
+      console.log('baseResults', baseResults);
 
       // Bước 3: Tổng hợp kết quả từ cả embedding và Gemini
       const finalResults = this.combineResults(baseResults, enhancedResults);
@@ -266,18 +297,15 @@ export class LlmService {
   /**
    * Tạo chuỗi biểu diễn người dùng dưới dạng text để phân tích
    */
-  private createUserText(user: User): string {
+  private createUserMatchText(user: IUserMatch): string {
     return `
-      User ID: ${user.id}
+      User ID: ${user._id.$oid}
       Name: ${user.name || 'Unknown'}
       Gender: ${user.gender || 'Unknown'}
-      Birthday: ${user.birthday ? user.birthday.toISOString().split('T')[0] : 'Unknown'}
       Raw Profile: ${user.rawProfile || ''}
       Interests: ${user.interests?.join(', ') || ''}
-      Languages: ${user.languages?.join(', ') || ''}
       Zodiac: ${user.zodiac || 'Unknown'}
       Education: ${user.education || 'Unknown'}
-      Future Family Plans: ${user.futureFamily || 'Unknown'}
       Communication Style: ${user.communicationStyle || 'Unknown'}
       Love Language: ${user.loveLanguage || 'Unknown'}
       Pets: ${user.pet || 'Unknown'}
@@ -287,6 +315,29 @@ export class LlmService {
       Diet: ${user.diet || 'Unknown'}
       Social Media Activity: ${user.socialMediaActivity || 'Unknown'}
       Sleep Habits: ${user.sleepHabit || 'Unknown'}
+      Looking For: ${user.lookingFor || 'Unknown'}
+    `;
+  }
+
+  private createUserText(user: User): string {
+    return `
+      User ID: ${user.id}
+      Name: ${user.name || 'Unknown'}
+      Gender: ${user.gender || 'Unknown'}
+      Raw Profile: ${user.rawProfile || ''}
+      Interests: ${user.interests?.join(', ') || ''}
+      Zodiac: ${user.zodiac || 'Unknown'}
+      Education: ${user.education || 'Unknown'}
+      Communication Style: ${user.communicationStyle || 'Unknown'}
+      Love Language: ${user.loveLanguage || 'Unknown'}
+      Pets: ${user.pet || 'Unknown'}
+      Alcohol Consumption: ${user.alcoholConsumption || 'Unknown'}
+      Smoking: ${user.smoking || 'Unknown'}
+      Exercise Habits: ${user.exerciseHabit || 'Unknown'}
+      Diet: ${user.diet || 'Unknown'}
+      Social Media Activity: ${user.socialMediaActivity || 'Unknown'}
+      Sleep Habits: ${user.sleepHabit || 'Unknown'}
+      Looking For: ${user.lookingFor || 'Unknown'}
     `;
   }
 
@@ -296,7 +347,7 @@ export class LlmService {
   private async enhanceMatchesWithGemini(
     userProfile: User,
     baseResults: Array<{
-      match: User;
+      match: IUserMatch;
       matchId: string;
       compatibilityScore: number;
     }>,
@@ -304,85 +355,90 @@ export class LlmService {
     // Khởi tạo Gemini model
     const model = this.gemini.getGenerativeModel({ model: 'gemini-1.5-pro' });
 
-    // Phân tích từng match với Gemini
-    const enhancedResults: any[] = [];
-    for (const { match, matchId } of baseResults) {
-      // Tạo thông tin người dùng dưới dạng text
-      const userProfileText = this.createUserText(userProfile);
-      const matchProfileText = this.createUserText(match);
+    // Tạo thông tin người dùng dưới dạng text cho từng match
+    const userProfileText = this.createUserText(userProfile);
+    const matchEntries = baseResults.map(({ match, matchId }, idx) => {
+      const matchProfileText = this.createUserMatchText(match);
+      return `Match ${idx + 1} (matchId: ${matchId}):\nTHÔNG TIN NGƯỜI DÙNG 1:\n${userProfileText}\nTHÔNG TIN NGƯỜI DÙNG 2:\n${matchProfileText}`;
+    });
 
-      // Xây dựng prompt cho Gemini
-      const prompt = `
-        Bạn là chuyên gia phân tích tâm lý và tương thích giữa hai người. Hãy phân tích mức độ tương thích dựa trên thông tin của họ.
-        
-        THÔNG TIN NGƯỜI DÙNG 1:
-${userProfileText}
+    // Xây dựng prompt tổng hợp
+    const prompt = `
+Bạn là chuyên gia phân tích tâm lý và tương thích giữa hai người. Dưới đây là danh sách các cặp cần phân tích:
 
-        THÔNG TIN NGƯỜI DÙNG 2:
-${matchProfileText}
+${matchEntries.join('\n\n')}
 
-        
-        Hãy phân tích mức độ tương thích giữa hai người dùng trên theo các tiêu chí:
-        1. Sở thích và hoạt động chung
-        2. Giá trị sống và mục tiêu tương lai
-        3. Thói quen và lối sống
-        4. Phong cách giao tiếp và ngôn ngữ tình yêu
-        
-        Trả về kết quả dưới dạng JSON với format sau:
-        {
-          "compatibilityScore": <số từ 0 đến 1, càng gần 1 càng tương thích>,
-          "reasons": ["lý do 1", "lý do 2", "lý do 3"],
-          "incompatibilities": ["điểm không tương thích 1", "điểm không tương thích 2"]
-        }
-        
-        Chỉ trả về JSON, không thêm bất kỳ văn bản nào khác.
-      `;
+Hãy phân tích mức độ tương thích của từng cặp theo các tiêu chí:
+1. Sở thích và hoạt động chung
+2. Giá trị sống và mục tiêu tương lai
+3. Thói quen và lối sống
+4. Phong cách giao tiếp và ngôn ngữ tình yêu
 
+Trả về kết quả dưới dạng một MẢNG JSON, mỗi phần tử ứng với từng Match theo đúng thứ tự, với format:
+[
+  {
+    "compatibilityScore": <số từ 0 đến 1, càng gần 1 càng tương thích>,
+    "reasons": ["lý do 1", "lý do 2", "lý do 3"],
+    "incompatibilities": ["điểm không tương thích 1", "điểm không tương thích 2"]
+  },
+  ...
+]
+Chỉ trả về mảng JSON, không thêm bất kỳ văn bản nào khác.
+`;
+
+    try {
+      // Gọi Gemini cho cả batch
+      const result = await model.generateContent(prompt);
+      const text = result.response.text();
+
+      // Làm sạch response để đảm bảo có thể parse được
+      const cleanText = text
+        .replace(/```json/g, '')
+        .replace(/```/g, '')
+        .trim();
+      let analysisResults: any[] = [];
       try {
-        // Gọi Gemini để phân tích
-        const result = await model.generateContent(prompt);
-        const text = result.response.text();
-
-        // Phân tích kết quả và chuyển thành JSON
-        try {
-          // Làm sạch response để đảm bảo có thể parse được
-          const cleanText = text
-            .replace(/```json/g, '')
-            .replace(/```/g, '')
-            .trim();
-          const analysisResult = JSON.parse(cleanText);
-
-          enhancedResults.push({
-            matchId,
-            compatibilityScore: analysisResult.compatibilityScore || 0.5,
-            reasons: analysisResult.reasons || [],
-            incompatibilities: analysisResult.incompatibilities || [],
-          });
-        } catch (error: any) {
-          this.logger.warn(
-            `Không thể phân tích kết quả JSON từ Gemini cho match ${matchId}: ${error.message}`,
-          );
-          enhancedResults.push({
-            matchId,
-            compatibilityScore: 0.5, // Giá trị mặc định
-            reasons: ['Không thể phân tích chi tiết từ Gemini'],
-            incompatibilities: [],
-          });
-        }
+        analysisResults = JSON.parse(cleanText);
+        if (!Array.isArray(analysisResults))
+          throw new Error('Gemini không trả về mảng JSON');
       } catch (error: any) {
         this.logger.warn(
-          `Lỗi khi gọi Gemini cho match ${matchId}: ${error.message}`,
+          `Không thể phân tích kết quả JSON từ Gemini cho batch: ${error.message}`,
         );
-        enhancedResults.push({
+        // fallback: trả về default cho tất cả
+        return baseResults.map(({ matchId }) => ({
           matchId,
-          compatibilityScore: 0.5, // Giá trị mặc định
-          reasons: ['Không thể kết nối với Gemini'],
+          compatibilityScore: 0.5,
+          reasons: ['Không thể phân tích chi tiết từ Gemini'],
           incompatibilities: [],
-        });
+        }));
       }
-    }
 
-    return enhancedResults;
+      console.log(analysisResults);
+
+      // Map lại kết quả với matchId tương ứng
+      return baseResults.map(({ matchId }, idx) => {
+        const analysis = analysisResults[idx] || {};
+
+        console.log('index', idx, analysis);
+
+        return {
+          matchId,
+          compatibilityScore: analysis.compatibilityScore ?? 0.5,
+          reasons: analysis.reasons ?? [],
+          incompatibilities: analysis.incompatibilities ?? [],
+        };
+      });
+    } catch (error: any) {
+      this.logger.warn(`Lỗi khi gọi Gemini cho batch: ${error.message}`);
+      // fallback: trả về default cho tất cả
+      return baseResults.map(({ matchId }) => ({
+        matchId,
+        compatibilityScore: 0.5,
+        reasons: ['Không thể kết nối với Gemini'],
+        incompatibilities: [],
+      }));
+    }
   }
 
   /**
@@ -390,7 +446,7 @@ ${matchProfileText}
    */
   private combineResults(
     baseResults: Array<{
-      match: User;
+      match: IUserMatch;
       matchId: string;
       compatibilityScore: number;
     }>,
@@ -413,6 +469,9 @@ ${matchProfileText}
 
         // Nếu có kết quả từ Gemini, kết hợp với kết quả từ embedding
         if (enhanced) {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { embeddings, ...matchRest } = match;
+
           // Tính điểm trung bình giữa embedding và Gemini (có thể điều chỉnh trọng số)
           const weightEmbedding = 0.4; // Trọng số cho phương pháp embedding
           const weightGemini = 0.6; // Trọng số cho phân tích của Gemini
@@ -421,7 +480,7 @@ ${matchProfileText}
             enhanced.compatibilityScore * weightGemini;
 
           return {
-            match,
+            match: matchRest,
             matchId,
             compatibilityScore: combinedScore,
             reasons: enhanced.reasons,
