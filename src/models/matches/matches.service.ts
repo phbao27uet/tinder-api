@@ -61,20 +61,15 @@ export class MatchesService {
         throw new NotFoundException('User not found');
       }
 
-      console.log(1);
-
       // Get vector similarity-based profiles
       const similarProfiles = await this.langchainService.getSimilarProfiles(
         userId,
         10,
       );
-      console.log(2);
 
       // Get RAG-enhanced recommendations with detailed compatibility analysis
       const ragRecommendations =
         await this.langchainService.getRecommendations(userId);
-
-      console.log(3);
 
       // Get existing pending matches
       const pendingMatches = await this.prisma.match.findMany({

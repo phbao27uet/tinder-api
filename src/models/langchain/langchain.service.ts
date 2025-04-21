@@ -84,7 +84,19 @@ export class LangChainService {
       const profilesText = similarProfiles.map(profile =>
         `Profile: ${profile.name || 'Anonymous'}
          Interests: ${profile.interests ? profile.interests.join(', ') : 'Not specified'}
-         Bio: ${profile.profile}
+         Bio: ${profile.rawProfile || 'No profile information'}
+        Zodiac: ${user.zodiac || 'Unknown'}
+        Education: ${user.education || 'Unknown'}
+        Communication Style: ${user.communicationStyle || 'Unknown'}
+        Love Language: ${user.loveLanguage || 'Unknown'}
+        Pets: ${user.pet || 'Unknown'}
+        Alcohol Consumption: ${user.alcoholConsumption || 'Unknown'}
+        Smoking: ${user.smoking || 'Unknown'}
+        Exercise Habits: ${user.exerciseHabit || 'Unknown'}
+        Diet: ${user.diet || 'Unknown'}
+        Social Media Activity: ${user.socialMediaActivity || 'Unknown'}
+        Sleep Habits: ${user.sleepHabit || 'Unknown'}
+        Looking For: ${user.lookingFor || 'Unknown'}
          Similarity Score: ${Math.round(profile.score * 100)}%
         `
       ).join('\n\n');
@@ -141,9 +153,6 @@ export class LangChainService {
   async getSimilarProfiles(userId: string, limit = 10) {
     try {
       const user = await this.prisma.user.findUnique({ where: { id: userId } });
-
-      console.log("user", user?.email);
-
       if (!user) {
         throw new Error('User not found');
       }
@@ -169,9 +178,6 @@ export class LangChainService {
           {
             $match: {
               _id: { $ne: user.id },
-              // Thêm các điều kiện khác từ searchSettings
-              // age: { $gte: currentUser.searchSettings?.minAge },
-              // gender: { $in: currentUser.preferences?.genders },
             },
           },
           {
@@ -215,8 +221,6 @@ export class LangChainService {
           },
         });
 
-        console.log("result", result);
-
         if (result && (result as any).cursor && (result as any).cursor.firstBatch) {
           const profiles = (result as any).cursor.firstBatch.map((user: any) => ({
             userId: user.id,
@@ -247,8 +251,6 @@ export class LangChainService {
         },
         take: limit,
       });
-
-      console.log("allUsers", allUsers.length)
 
       return allUsers.map(otherUser => {
         // Calculate basic similarity based on shared interests
@@ -288,6 +290,18 @@ export class LangChainService {
       Age: ${user.age || 'Not specified'}
       Gender: ${user.gender || 'Not specified'}
       Looking for: ${user.lookingFor || 'Not specified'}
+      
+      Zodiac: ${user.zodiac || 'Unknown'}
+      Education: ${user.education || 'Unknown'}
+      Communication Style: ${user.communicationStyle || 'Unknown'}
+      Love Language: ${user.loveLanguage || 'Unknown'}
+      Pets: ${user.pet || 'Unknown'}
+      Alcohol Consumption: ${user.alcoholConsumption || 'Unknown'}
+      Smoking: ${user.smoking || 'Unknown'}
+      Exercise Habits: ${user.exerciseHabit || 'Unknown'}
+      Diet: ${user.diet || 'Unknown'}
+      Social Media Activity: ${user.socialMediaActivity || 'Unknown'}
+      Sleep Habits: ${user.sleepHabit || 'Unknown'}
       
       Interests: ${user.interests ? user.interests.join(', ') : 'Not specified'}
       Languages: ${user.languages ? user.languages.join(', ') : 'Not specified'}

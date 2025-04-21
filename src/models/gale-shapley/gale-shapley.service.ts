@@ -66,9 +66,9 @@ export class GaleShapleyService {
    */
   private scheduleMatching() {
     // Thiết lập interval chạy mỗi 24 giờ (24 * 60 * 60 * 1000 ms)
-    const interval = setInterval(() => this.runMatching(), 24 * 60 * 60 * 1000);
-    this.schedulerRegistry.addInterval('daily-matching', interval);
-    // this.runMatching();
+    // const interval = setInterval(() => this.runMatching(), 24 * 60 * 60 * 1000);
+    // this.schedulerRegistry.addInterval('daily-matching', interval);
+    this.runMatching();
   }
 
   /**
@@ -184,8 +184,8 @@ export class GaleShapleyService {
               reviewerId,
               matches,
             ),
-            // Thêm trường matchedAt để theo dõi thời gian tạo match
-            matchedAt: new Date(),
+            // Thêm trường matchDate để theo dõi thời gian tạo match
+            matchDate: new Date(),
           },
         }),
       ),
@@ -422,6 +422,7 @@ export class GaleShapleyService {
         // Nếu cả hai đều thích nhau hơn người họ đang ghép đôi, đây là blocking pair
         // Giảm điểm ổn định vì hệ thống có thể không ổn định
         if (otherReviewerPrefersProposer) {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           stabilityScore -= 15; // Giảm 15 điểm cho mỗi blocking pair
         }
       }
