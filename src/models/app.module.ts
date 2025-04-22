@@ -12,6 +12,7 @@ import { SwipesModule } from './swipes/swipes.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { UploadModule } from 'src/upload/upload.model';
 import { MatchesModule } from './matches/matches.module';
+import { MessagesModule } from './messages/messages.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { MatchesModule } from './matches/matches.module';
     UploadModule,
     MatchesModule,
     ScheduleModule.forRoot(),
+    MessagesModule,
   ],
   controllers: [AppController],
   providers: [

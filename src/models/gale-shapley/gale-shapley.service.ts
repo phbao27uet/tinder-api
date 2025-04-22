@@ -68,7 +68,7 @@ export class GaleShapleyService {
     // Thiết lập interval chạy mỗi 24 giờ (24 * 60 * 60 * 1000 ms)
     // const interval = setInterval(() => this.runMatching(), 24 * 60 * 60 * 1000);
     // this.schedulerRegistry.addInterval('daily-matching', interval);
-    this.runMatching();
+    // this.runMatching();
   }
 
   /**

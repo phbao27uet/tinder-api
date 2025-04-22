@@ -8,6 +8,8 @@ generator client {
 }
 
 model User {
+  sentMessages     Message[] @relation("SentMessages")
+  receivedMessages Message[] @relation("ReceivedMessages")
   id                String    @id @default(auto()) @map("_id") @db.ObjectId
   email             String    @unique
   password          String
@@ -89,12 +91,27 @@ enum MatchStatus {
 }
 
 model Match {
+  messages Message[]
   id             String      @id @default(auto()) @map("_id") @db.ObjectId
   userIDs        String[]    @db.ObjectId
   users          User[]      @relation(fields: [userIDs], references: [id])
   matchDate      DateTime    @default(now())
   stabilityScore Float? // Score from Gale-Shapley algorithm
   status         MatchStatus @default(PENDING)
+}
+
+model Message {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  senderId   String   @db.ObjectId
+  receiverId String   @db.ObjectId
+  matchId    String?  @db.ObjectId
+  content    String
+  timestamp  DateTime @default(now())
+  read       Boolean  @default(false)
+
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  match      Match?   @relation(fields: [matchId], references: [id])
 }
 
 model Preference {
