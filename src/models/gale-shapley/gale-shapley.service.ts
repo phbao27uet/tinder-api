@@ -484,8 +484,6 @@ export class GaleShapleyService {
         this.logger.log(
           `Đã tính toán và lưu preferences cho người dùng ${user.id}`,
         );
-
-        await new Promise((resolve) => setTimeout(resolve, 5000));
       } catch (error) {
         this.logger.error(
           `Lỗi khi tính toán preferences cho người dùng ${user.id}:`,
@@ -682,6 +680,52 @@ export class GaleShapleyService {
       userPreference,
       allUsers,
     );
+  }
+
+  /**
+  * Lấy danh sách gợi ý cho người dùng dựa trên preferences của họ
+  * @param userId ID của người dùng cần lấy gợi ý
+  * @returns Danh sách người dùng được gợi ý kèm theo điểm tương đồng
+  */
+  async run(userId: string): Promise<UserSuggestion[]> {
+   // Kiểm tra người dùng tồn tại
+   const user = await this.prisma.user.findUnique({
+     where: { id: userId },
+     include: { preferences: true },
+   });
+
+    if (!user) {
+      throw new NotFoundException(
+        `Không tìm thấy người dùng với ID: ${userId}`,
+      );
+    }
+
+     // Lấy tất cả người dùng
+     const allUsers = await this.prisma.user.findMany({
+       include: { preferences: true },
+     });
+
+     // Tính toán preferences
+     await this.calculateAndSavePreferences([user], allUsers);
+
+     // Lấy lại người dùng với preferences đã được tính toán
+     const updatedUser = await this.prisma.user.findUnique({
+       where: { id: userId },
+       include: { preferences: true },
+     });
+
+     if (!updatedUser || !updatedUser.preferences[0]) {
+       throw new NotFoundException(
+         'Không thể tính toán preferences cho người dùng',
+       );
+     }
+
+     // Cập nhật userPreference
+     return this.getUserSuggestionsFromPreference(
+       updatedUser,
+       updatedUser.preferences[0],
+       allUsers,
+     );
   }
 
   /**
