@@ -256,9 +256,6 @@ export class LlmService {
         baseResults,
       );
 
-      console.log('enhancedResults', enhancedResults);
-      console.log('baseResults', baseResults);
-
       // Bước 3: Tổng hợp kết quả từ cả embedding và Gemini
       const finalResults = this.combineResults(baseResults, enhancedResults);
 

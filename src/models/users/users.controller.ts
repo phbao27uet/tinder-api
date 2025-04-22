@@ -24,6 +24,12 @@ export class UserController {
   }
 
   @Auth('USER')
+  @Get('profile')
+  async profile(@GetCurrentUserId() id: string) {
+    return this.userService.getProfile(id);
+  }
+  
+  @Auth('USER')
   @Get('matches')
   async matches(@GetCurrentUserId() id: string) {
     return this.userService.findMatches(id);

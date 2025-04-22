@@ -140,6 +140,23 @@ export class UserService {
     return {matches, user, analyzedMatches};
   }
 
+  async getProfile(id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        id,
+      },
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password, refreshToken, role, embeddings, job, ...rest } = user;
+    
+    return rest;
+  }
+
   async update(id: string, updateDto: UpdateUserDto) {
     const user = await this.prisma.user.findUnique({
       where: {
