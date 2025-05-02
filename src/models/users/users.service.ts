@@ -6,12 +6,15 @@ import { PrismaService } from 'src/shared/prisma/prisma.service';
 import { ChangePasswordDto, UpdateUserDto } from './dto/update-user.dto';
 import { hashPassword } from '@shared/utils';
 import { IUserMatch, LlmService } from '@models/llm/llm.service';
+import { GaleShapleyService } from '@models/gale-shapley/gale-shapley.service';
 
 @Injectable()
 export class UserService {
-  constructor(private prisma: PrismaService,
-    private llmService: LlmService
-  ) { }
+  constructor(
+    private prisma: PrismaService,
+    private llmService: LlmService,
+    private galeShapleyService: GaleShapleyService,
+  ) {}
 
   async findAll(defaultFindAllQuery: DefaultFindAllQueryDto) {
     const {
@@ -57,6 +60,22 @@ export class UserService {
         total: total ?? 0,
         totalPages: Math.ceil((total ?? 0) / perPage),
       },
+    };
+  }
+
+  async getBalance(id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        id,
+      },
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    return {
+      balance: user.balance,
     };
   }
 
@@ -134,10 +153,10 @@ export class UserService {
 
     const analyzedMatches = await this.llmService.analyzeMatchesWithAI(
       user,
-      matches as unknown as IUserMatch[]
+      matches as unknown as IUserMatch[],
     );
 
-    return {matches, user, analyzedMatches};
+    return { matches, user, analyzedMatches };
   }
 
   async getProfile(id: string) {
@@ -153,7 +172,7 @@ export class UserService {
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, refreshToken, role, embeddings, job, ...rest } = user;
-    
+
     return rest;
   }
 
@@ -168,17 +187,74 @@ export class UserService {
       throw new Error('User not found');
     }
 
-    return await this.prisma.user.update({
+    const userUpdated = await this.prisma.user.update({
       where: {
         id,
       },
-      data: updateDto,
-      select: {
-        id: true,
-        email: true,
-        role: true,
+      data: {
+        images: updateDto.images,
+        rawProfile: updateDto.rawProfile,
+        interests: updateDto.interests as any,
+        education: updateDto.education,
+        lookingFor: updateDto.lookingFor,
+        zodiac: updateDto.zodiacSign,
+        futureFamily: updateDto.futureFamily,
+        communicationStyle: updateDto.communicationStyle,
+        loveLanguage: updateDto.loveLanguage,
+        pet: updateDto.pet,
+        alcoholConsumption: updateDto.alcoholConsumption,
+        smoking: updateDto.smoking,
+        exerciseHabit: updateDto.exerciseHabit,
+        diet: updateDto.diet,
+        socialMediaActivity: updateDto.socialMediaActivity,
+        sleepHabit: updateDto.sleepHabit,
+        preferredDistance: updateDto.preferredDistance,
       },
     });
+
+    const { embeddings } = await this.llmService.processUserData({
+      email: userUpdated.email,
+      name: userUpdated.name as string,
+      birthday: userUpdated.birthday as Date,
+      gender: userUpdated.gender as 'MALE' | 'FEMALE',
+      password: userUpdated.password,
+      languages: userUpdated.languages,
+      shortVideo: userUpdated.shortVideo as string,
+      rawProfile: updateDto.rawProfile,
+      interests: updateDto.interests as any,
+      education: updateDto.education,
+      lookingFor: updateDto.lookingFor,
+      zodiacSign: updateDto.zodiacSign,
+      futureFamily: updateDto.futureFamily,
+      communicationStyle: updateDto.communicationStyle,
+      loveLanguage: updateDto.loveLanguage,
+      pet: updateDto.pet,
+      alcoholConsumption: updateDto.alcoholConsumption,
+      smoking: updateDto.smoking,
+      exerciseHabit: updateDto.exerciseHabit,
+      diet: updateDto.diet,
+      socialMediaActivity: updateDto.socialMediaActivity,
+      sleepHabit: updateDto.sleepHabit,
+      preferredDistance: updateDto.preferredDistance,
+      images: updateDto.images,
+    });
+
+    await this.prisma.user.update({
+      where: {
+        id,
+      },
+      data: {
+        embeddings,
+      },
+    });
+
+    await this.galeShapleyService.run(id);
+
+    return {
+      id: userUpdated.id,
+      email: userUpdated.email,
+      role: userUpdated.role,
+    };
   }
 
   async delete(id: string) {

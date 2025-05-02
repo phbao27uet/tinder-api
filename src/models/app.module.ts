@@ -13,6 +13,8 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { UploadModule } from 'src/upload/upload.model';
 import { MatchesModule } from './matches/matches.module';
 import { MessagesModule } from './messages/messages.module';
+import { VipModule } from './vip/vip.module';
+import { PaymentModule } from './payment/payment.module';
 
 @Module({
   imports: [
@@ -30,6 +32,8 @@ import { MessagesModule } from './messages/messages.module';
     MatchesModule,
     ScheduleModule.forRoot(),
     MessagesModule,
+    VipModule,
+    PaymentModule
   ],
   controllers: [AppController],
   providers: [

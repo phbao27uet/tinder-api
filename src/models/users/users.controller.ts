@@ -35,18 +35,32 @@ export class UserController {
     return this.userService.findMatches(id);
   }
 
+  @Auth('USER')
+  @Get('balance')
+  async balance(@GetCurrentUserId() id: string) {
+    return this.userService.getBalance(id);
+  }
+
   @Get(':id/matches')
   async getMatches(@Param('id') id: string) {
     return this.userService.findMatches(id);
   }
 
-  @Auth('ADMIN', 'USER')
+  @Auth('USER')
+  @Patch('profile')
+  async updateProfile(
+    @GetCurrentUserId() id: string,
+    @Body() updateDto: UpdateUserDto) {
+    return this.userService.update(id, updateDto);
+  }
+
+  @Auth('USER')
   @Patch(':id')
   async update(@Param('id') id: string, @Body() updateDto: UpdateUserDto) {
     return this.userService.update(id, updateDto);
   }
 
-  @Auth('ADMIN', 'USER')
+  @Auth('USER')
   @Patch(':id/change-password')
   async changePassword(
     @Param('id') id: string,
@@ -55,7 +69,7 @@ export class UserController {
     return this.userService.changePassword(id, updateDto);
   }
 
-  @Auth('ADMIN', 'USER')
+  @Auth('USER')
   @Delete(':id')
   async delete(@Param('id') id: string) {
     return this.userService.delete(id);
