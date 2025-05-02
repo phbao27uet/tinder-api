@@ -1,6 +1,7 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { MatchesService } from './matches.service';
 import { Auth, GetCurrentUserId } from '@shared/decorators';
+import { CreateSwipeDto } from './dto';
 
 @Auth('USER')
 @Controller('matches')
@@ -24,5 +25,17 @@ export class MatchesController {
     @Param('id') matchId: string,
   ) {
     return this.matchesService.getMatchDetails(userId, matchId);
+  }
+
+  @Post('swipe')
+  createSwipe(
+    @GetCurrentUserId() userId: string,
+    @Body() createSwipeDto: CreateSwipeDto,
+  ) {
+    return this.matchesService.createSwipe(
+      userId,
+      createSwipeDto.targetUserId,
+      createSwipeDto.direction,
+    );
   }
 }

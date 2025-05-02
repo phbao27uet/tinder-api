@@ -1,5 +1,4 @@
 import { PrismaClient } from '@prisma/client';
-import { hashPassword } from 'src/shared/utils/hash';
 
 const prisma = new PrismaClient();
 
@@ -43,30 +42,6 @@ export const VIP_PACKAGES = [
 ];
 
 async function main() {
-  const password = await hashPassword('123123a');
-
-  await prisma.user.upsert({
-    where: { id: '666666666666666666666666' },
-    update: {},
-    create: {
-      email: 'admin',
-      password: password,
-      role: 'ADMIN',
-      name: 'Admin',
-    },
-  });
-
-  await prisma.user.upsert({
-    where: { id: '666666666666666666666667' },
-    update: {},
-    create: {
-      email: 'user',
-      password: password,
-      role: 'USER',
-      name: 'Nguyễn Văn A',
-    },
-  });
-
   for (const pkg of VIP_PACKAGES) {
     await prisma.vipPackage.upsert({
       where: { id: pkg.id },

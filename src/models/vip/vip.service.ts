@@ -2,9 +2,11 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { UpdateVipPackageDto, SubscribeVipDto } from './dto';
+import { Direction } from '@prisma/client';
 
 @Injectable()
 export class VipService {
@@ -176,5 +178,84 @@ export class VipService {
       where: { userId },
       data: { isActive: false },
     });
+  }
+
+  async getUserLikes(userId: string) {
+    // Check if user has active VIP subscription
+    const vipStatus = await this.getUserVipStatus(userId);
+    
+    if (!vipStatus.isVip) {
+      throw new ForbiddenException('This feature is only available for VIP users');
+    }
+    
+    // Get users who liked the current user (RIGHT swipe)
+    const likes = await this.prisma.swipe.findMany({
+      where: {
+        targetUserId: userId,
+        direction: {
+          in: [Direction.RIGHT, Direction.UP]
+        }
+      },
+      include: {
+        swiper: {
+          select: {
+            id: true,
+            name: true,
+            images: true,
+            gender: true,
+            birthday: true,
+            interests: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+    
+    return likes.map(like => ({
+      liked_at: like.createdAt,
+      user: like.swiper
+    }));
+  }
+
+  async getPopularProfiles(userId: string, limit: number = 10) {
+    // Check if user has active VIP subscription
+    const vipStatus = await this.getUserVipStatus(userId);
+    
+    if (!vipStatus.isVip) {
+      throw new ForbiddenException('This feature is only available for VIP users');
+    }
+    
+    // Lấy top người dùng được quan tâm nhiều nhất
+    const topUsers = await this.prisma.user.findMany({
+      where: {
+        id: { not: userId }, 
+        likesCount: {
+          gte: 1
+        },
+        superLikesCount: {
+          gte: 1
+        }
+      },
+      orderBy: [
+        { likesCount: 'desc' },
+        { superLikesCount: 'desc' }
+      ],
+      take: limit,
+      select: {
+        id: true,
+        name: true,
+        images: true,
+        birthday: true,
+        gender: true,
+        interests: true,
+        rawProfile: true,
+        likesCount: true,
+        superLikesCount: true
+      }
+    });
+
+    return topUsers;
   }
 }

@@ -20,6 +20,8 @@ model User {
   gender            Gender?
   // location     Json? // GeoJSON format for geospatial queries
   preferredDistance Int?
+  likesCount        Int       @default(0) // Số lượt được like
+  superLikesCount   Int       @default(0) // Số lượt được super like
 
   // LLM
   rawProfile String? // Raw text input by user
@@ -85,7 +87,13 @@ model Swipe {
   targetUser   User      @relation("targetUser", fields: [targetUserId], references: [id])
   targetUserId String    @db.ObjectId
   direction    Direction
+  isMatched    Boolean   @default(false) // Đánh dấu đã match hay chưa
   createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  
+  @@index([swiperId])
+  @@index([targetUserId])
+  @@index([direction])
 }
 
 enum MatchStatus {
@@ -102,6 +110,11 @@ model Match {
   matchDate      DateTime    @default(now())
   stabilityScore Float? // Score from Gale-Shapley algorithm
   status         MatchStatus @default(PENDING)
+  lastActivity   DateTime    @default(now())
+  
+  @@index([userIDs])
+  @@index([status])
+  @@index([matchDate])
 }
 
 model Message {
@@ -157,9 +170,9 @@ model VipSubscription {
 }
 
 enum Direction {
-  LEFT
-  RIGHT
-  UP
+  LEFT // Dislike
+  RIGHT // Like
+  UP // SuperLike
 }
 
 enum Role {

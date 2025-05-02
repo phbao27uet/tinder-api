@@ -6,6 +6,7 @@ import {
   Param,
   Delete,
   Put,
+  Query,
 } from '@nestjs/common';
 import { VipService } from './vip.service';
 import { UpdateVipPackageDto, SubscribeVipDto } from './dto';
@@ -21,6 +22,22 @@ export class VipController {
     return this.vipService.getAllPackages();
   }
 
+  @Auth('USER')
+  @Get('likes')
+  async getUserLikes(@GetCurrentUserId() userId: string) {
+    return this.vipService.getUserLikes(userId);
+  }
+
+  @Auth('USER')
+  @Get('popular-users')
+  async getPopularProfiles(
+    @GetCurrentUserId() userId: string,
+    @Query('limit') limit: number = 10
+  ) {
+    return this.vipService.getPopularProfiles(userId, +limit);
+  }
+
+  @Auth('USER')
   @Get('packages/:id')
   async getPackageById(@Param('id') id: string) {
     return this.vipService.getPackageById(id);

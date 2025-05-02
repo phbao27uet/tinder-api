@@ -302,4 +302,77 @@ export class UserService {
       },
     });
   }
+
+  
+  async getSubscriptionHistory(userId: string) {
+    // Get user's current and past VIP subscriptions
+    const subscriptionHistory = await this.prisma.vipSubscription.findMany({
+      where: {
+        userId: userId,
+      },
+      include: {
+        vipPackage: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+    
+    return subscriptionHistory.map(subscription => ({
+      id: subscription.id,
+      packageName: subscription.vipPackage.name,
+      startDate: subscription.startDate,
+      endDate: subscription.endDate,
+      isActive: subscription.isActive,
+      paymentMethod: subscription.paymentMethod,
+      price: subscription.vipPackage.price,
+      purchasedAt: subscription.createdAt
+    }));
+  }
+
+  async getMatchHistory(userId: string) {
+    // Get all matches for the current user
+    const matches = await this.prisma.match.findMany({
+      where: {
+        userIDs: {
+          has: userId,
+        },
+        status: 'ACCEPTED', // Only show accepted matches
+      },
+      include: {
+        users: {
+          select: {
+            id: true,
+            name: true,
+            images: true,
+            gender: true,
+            birthday: true,
+            interests: true,
+          },
+        },
+        messages: {
+          orderBy: {
+            timestamp: 'desc',
+          },
+          take: 1, // Get latest message
+        },
+      },
+      orderBy: {
+        matchDate: 'desc',
+      },
+    });
+    
+    return matches.map(match => {
+      // Find the other user in the match (not the current user)
+      const otherUser = match.users.find(user => user.id !== userId);
+      
+      return {
+        id: match.id,
+        matchDate: match.matchDate,
+        stabilityScore: match.stabilityScore,
+        matchedUser: otherUser,
+        lastMessage: match.messages[0] || null,
+      };
+    });
+  }
 }

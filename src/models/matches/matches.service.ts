@@ -1,14 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '@shared/prisma';
-import { GaleShapleyService } from '../gale-shapley/gale-shapley.service';
 import { LangChainService } from '../langchain/langchain.service';
 import { MatchStatus } from '@shared/enums/match-status.enum';
+import { Direction } from '@prisma/client';
 
 @Injectable()
 export class MatchesService {
   constructor(
     private prisma: PrismaService,
-    private galeShapleyService: GaleShapleyService,
     private langchainService: LangChainService,
     // eslint-disable-next-line prettier/prettier
   ) { }
@@ -150,6 +149,125 @@ export class MatchesService {
         rawProfile: otherUser.rawProfile,
       },
       conversationStarters,
+    };
+  }
+
+  /**
+   * Create a new swipe record (like, dislike, superlike)
+   */
+  async createSwipe(swiperId: string, targetUserId: string, direction: Direction) {
+    // Kiểm tra người dùng tồn tại
+    const [swiper, targetUser] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: swiperId } }),
+      this.prisma.user.findUnique({ where: { id: targetUserId } })
+    ]);
+
+    if (!swiper || !targetUser) {
+      throw new NotFoundException('Người dùng không tồn tại');
+    }
+
+    // Kiểm tra xem đã có swipe nào tồn tại chưa
+    const existingSwipe = await this.prisma.swipe.findFirst({
+      where: {
+        swiperId,
+        targetUserId
+      }
+    });
+
+    if (existingSwipe) {
+      throw new ConflictException('Bạn đã thực hiện swipe với người dùng này rồi');
+    }
+
+    // Tạo swipe mới
+    const swipe = await this.prisma.swipe.create({
+      data: {
+        swiperId,
+        targetUserId,
+        direction
+      }
+    });
+
+    // Nếu là like hoặc superlike, kiểm tra match
+    if (direction === Direction.RIGHT || direction === Direction.UP) {
+      const oppositeSwipe = await this.prisma.swipe.findFirst({
+        where: {
+          swiperId: targetUserId,
+          targetUserId: swiperId,
+          direction: {
+            in: [Direction.RIGHT, Direction.UP]
+          }
+        }
+      });
+
+      // Nếu có match
+      if (oppositeSwipe) {
+        // Cập nhật swipe đã match
+        await Promise.all([
+          this.prisma.swipe.update({
+            where: { id: swipe.id },
+            data: { isMatched: true }
+          }),
+          this.prisma.swipe.update({
+            where: { id: oppositeSwipe.id },
+            data: { isMatched: true }
+          })
+        ]);
+
+        // Tạo match mới
+        const newMatch = await this.prisma.match.create({
+          data: {
+            userIDs: [swiperId, targetUserId],
+            users: {
+              connect: [
+                { id: swiperId },
+                { id: targetUserId }
+              ]
+            },
+            status: MatchStatus.ACCEPTED,
+            stabilityScore: 1.0 // Score mặc định cho match trực tiếp
+          },
+          include: {
+            users: true
+          }
+        });
+
+        // Cập nhật thống kê
+        if (direction === Direction.RIGHT) {
+          await this.prisma.user.update({
+            where: { id: targetUserId },
+            data: { likesCount: { increment: 1 } }
+          });
+        } else if (direction === Direction.UP) {
+          await this.prisma.user.update({
+            where: { id: targetUserId },
+            data: { superLikesCount: { increment: 1 } }
+          });
+        }
+
+        return {
+          swipe,
+          match: newMatch,
+          isMatched: true
+        };
+      }
+
+      // Không match nhưng vẫn cập nhật thống kê
+      if (direction === Direction.RIGHT) {
+        await this.prisma.user.update({
+          where: { id: targetUserId },
+          data: { likesCount: { increment: 1 } }
+        });
+      } else if (direction === Direction.UP) {
+        await this.prisma.user.update({
+          where: { id: targetUserId },
+          data: { superLikesCount: { increment: 1 } }
+        });
+      }
+    }
+
+    return {
+      swipe,
+      isMatched: false
     };
   }
 

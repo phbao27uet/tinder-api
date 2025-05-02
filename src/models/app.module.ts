@@ -8,7 +8,6 @@ import { ZodValidationPipe } from 'nestjs-zod';
 import { AppController } from './app.controller';
 import { LlmModule } from './llm/llm.module';
 import { GaleShapleyModule } from './gale-shapley/gale-shapley.module';
-import { SwipesModule } from './swipes/swipes.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { UploadModule } from 'src/upload/upload.model';
 import { MatchesModule } from './matches/matches.module';
@@ -27,7 +26,6 @@ import { PaymentModule } from './payment/payment.module';
     UsersModule,
     LlmModule,
     GaleShapleyModule,
-    SwipesModule,
     UploadModule,
     MatchesModule,
     ScheduleModule.forRoot(),

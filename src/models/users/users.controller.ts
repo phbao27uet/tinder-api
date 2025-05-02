@@ -41,6 +41,18 @@ export class UserController {
     return this.userService.getBalance(id);
   }
 
+  @Auth('USER')
+  @Get('subscription-history')
+  async getSubscriptionHistory(@GetCurrentUserId() userId: string) {
+    return this.userService.getSubscriptionHistory(userId);
+  }
+
+  @Auth('USER')
+  @Get('match-history')
+  async getMatchHistory(@GetCurrentUserId() userId: string) {
+    return this.userService.getMatchHistory(userId);
+  }
+
   @Get(':id/matches')
   async getMatches(@Param('id') id: string) {
     return this.userService.findMatches(id);

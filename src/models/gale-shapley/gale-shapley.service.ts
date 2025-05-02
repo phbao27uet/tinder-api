@@ -637,14 +637,31 @@ export class GaleShapleyService {
     // Lấy preferences của người dùng
     const userPreference = user.preferences[0];
 
+    const swipedUsers = await this.prisma.swipe.findMany({
+      where: {
+        swiperId: userId,
+      },
+      select: {
+        targetUserId: true,
+      },
+    });
+
+    const swipedUserIds = swipedUsers.map((swipe) => swipe.targetUserId);
+
     // Nếu chưa có preferences, cần tính toán trước
     if (!userPreference || userPreference.preferredOrder.length === 0) {
       this.logger.log(
         `Người dùng ${userId} chưa có preferences, tiến hành tính toán...`,
       );
+
       // Lấy tất cả người dùng
       const allUsers = await this.prisma.user.findMany({
         include: { preferences: true },
+        where: {
+          id: {
+            notIn: [userId, ...swipedUserIds],
+          },
+        },
       });
 
       // Tính toán preferences
@@ -673,6 +690,11 @@ export class GaleShapleyService {
     // Lấy tất cả người dùng để lọc theo preferredOrder
     const allUsers = await this.prisma.user.findMany({
       include: { preferences: true },
+      where: {
+        id: {
+          notIn: [userId, ...swipedUserIds],
+        },
+      },
     });
 
     return this.getUserSuggestionsFromPreference(
@@ -700,9 +722,25 @@ export class GaleShapleyService {
       );
     }
 
+    const swipedUsers = await this.prisma.swipe.findMany({
+      where: {
+        swiperId: userId,
+      },
+      select: {
+        targetUserId: true,
+      },
+    });
+
+    const swipedUserIds = swipedUsers.map((swipe) => swipe.targetUserId);
+
      // Lấy tất cả người dùng
      const allUsers = await this.prisma.user.findMany({
        include: { preferences: true },
+       where: {
+         id: {
+           notIn: [userId, ...swipedUserIds],
+         },
+       },
      });
 
      // Tính toán preferences
