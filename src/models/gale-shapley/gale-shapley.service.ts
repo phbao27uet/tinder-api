@@ -4,6 +4,7 @@ import { Preference, Prisma } from '@prisma/client';
 import { PrismaService } from '@shared/prisma/prisma.service';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { LlmService, IUserMatch } from '@models/llm/llm.service';
+import { getDistance } from '@shared/utils/distance';
 
 /**
  * Định nghĩa kiểu User mở rộng với preferences
@@ -664,8 +665,19 @@ export class GaleShapleyService {
         },
       });
 
+      // Thuc hien loc theo Distance
+      const filteredUsers = allUsers.filter((u) => {
+        const distance = getDistance(
+          u.latitude,
+          u.longitude,
+          user.latitude,
+          user.longitude,
+        );
+        return distance <= user.preferredDistance;
+      });
+
       // Tính toán preferences
-      await this.calculateAndSavePreferences([user], allUsers);
+      await this.calculateAndSavePreferences([user], filteredUsers);
 
       // Lấy lại người dùng với preferences đã được tính toán
       const updatedUser = await this.prisma.user.findUnique({
@@ -683,7 +695,7 @@ export class GaleShapleyService {
       return this.getUserSuggestionsFromPreference(
         updatedUser,
         updatedUser.preferences[0],
-        allUsers,
+        filteredUsers,
       );
     }
 
@@ -697,10 +709,21 @@ export class GaleShapleyService {
       },
     });
 
+    // Thuc hien loc theo Distance
+    const filteredUsers = allUsers.filter((u) => {
+      const distance = getDistance(
+        u.latitude,
+        u.longitude,
+        user.latitude,
+        user.longitude,
+      );
+      return distance <= user.preferredDistance;
+    });
+
     return this.getUserSuggestionsFromPreference(
       user,
       userPreference,
-      allUsers,
+      filteredUsers,
     );
   }
 
@@ -710,11 +733,11 @@ export class GaleShapleyService {
   * @returns Danh sách người dùng được gợi ý kèm theo điểm tương đồng
   */
   async run(userId: string): Promise<UserSuggestion[]> {
-   // Kiểm tra người dùng tồn tại
-   const user = await this.prisma.user.findUnique({
-     where: { id: userId },
-     include: { preferences: true },
-   });
+    // Kiểm tra người dùng tồn tại
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { preferences: true },
+    });
 
     if (!user) {
       throw new NotFoundException(
@@ -733,37 +756,48 @@ export class GaleShapleyService {
 
     const swipedUserIds = swipedUsers.map((swipe) => swipe.targetUserId);
 
-     // Lấy tất cả người dùng
-     const allUsers = await this.prisma.user.findMany({
-       include: { preferences: true },
-       where: {
-         id: {
-           notIn: [userId, ...swipedUserIds],
-         },
-       },
-     });
+    // Lấy tất cả người dùng
+    const allUsers = await this.prisma.user.findMany({
+      include: { preferences: true },
+      where: {
+        id: {
+          notIn: [userId, ...swipedUserIds],
+        },
+      },
+    });
 
-     // Tính toán preferences
-     await this.calculateAndSavePreferences([user], allUsers);
+    // Thuc hien loc theo Distance
+    const filteredUsers = allUsers.filter((u) => {
+      const distance = getDistance(
+        u.latitude,
+        u.longitude,
+        user.latitude,
+        user.longitude,
+      );
+      return distance <= user.preferredDistance;
+    });
 
-     // Lấy lại người dùng với preferences đã được tính toán
-     const updatedUser = await this.prisma.user.findUnique({
-       where: { id: userId },
-       include: { preferences: true },
-     });
+    // Tính toán preferences
+    await this.calculateAndSavePreferences([user], filteredUsers);
 
-     if (!updatedUser || !updatedUser.preferences[0]) {
-       throw new NotFoundException(
-         'Không thể tính toán preferences cho người dùng',
-       );
-     }
+    // Lấy lại người dùng với preferences đã được tính toán
+    const updatedUser = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { preferences: true },
+    });
 
-     // Cập nhật userPreference
-     return this.getUserSuggestionsFromPreference(
-       updatedUser,
-       updatedUser.preferences[0],
-       allUsers,
-     );
+    if (!updatedUser || !updatedUser.preferences[0]) {
+      throw new NotFoundException(
+        'Không thể tính toán preferences cho người dùng',
+      );
+    }
+
+    // Cập nhật userPreference
+    return this.getUserSuggestionsFromPreference(
+      updatedUser,
+      updatedUser.preferences[0],
+      filteredUsers,
+    );
   }
 
   /**

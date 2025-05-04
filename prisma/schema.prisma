@@ -59,6 +59,8 @@ model User {
   searchSettings SearchSetting[]
 
   lastIndexed DateTime? @default(now())
+  latitude  Float?
+  longitude Float?
 
   vipSubscription VipSubscription?
   sentMessages     Message[] @relation("SentMessages")

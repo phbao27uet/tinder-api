@@ -12,6 +12,7 @@ import { UserService } from './users.service';
 import { Auth, GetCurrentUserId } from '@shared/decorators';
 import { DefaultFindAllQueryDto } from '@models/base/dto';
 import { ChangePasswordDto, UpdateUserDto } from './dto/update-user.dto';
+import { UpdateLocationDto } from './dto/update-location.dto';
 
 @Controller('users')
 export class UserController {
@@ -64,6 +65,14 @@ export class UserController {
     @GetCurrentUserId() id: string,
     @Body() updateDto: UpdateUserDto) {
     return this.userService.update(id, updateDto);
+  }
+
+  @Auth('USER')
+  @Patch('location')
+  async updateLocation(
+    @GetCurrentUserId() id: string,
+    @Body() updateDto: UpdateLocationDto) {
+    return this.userService.updateLocation(id, updateDto);
   }
 
   @Auth('USER')
