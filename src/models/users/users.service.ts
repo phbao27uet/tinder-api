@@ -387,8 +387,8 @@ export class UserService {
     if (!user) {
       throw new Error('User not found');
     }
-
-    return await this.prisma.user.update({
+    
+    const userUpdated = await this.prisma.user.update({
       where: {
         id,
       },
@@ -397,5 +397,7 @@ export class UserService {
         longitude: updateDto.longitude,
       },
     });
+
+    return userUpdated;
   }
 }

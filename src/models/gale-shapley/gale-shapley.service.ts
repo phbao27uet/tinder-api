@@ -45,6 +45,7 @@ export type UserSuggestion = {
     socialMediaActivity?: string;
     sleepHabit?: string;
     communicationStyle?: string;
+    distance?: string;
   };
 };
 
@@ -668,12 +669,12 @@ export class GaleShapleyService {
       // Thuc hien loc theo Distance
       const filteredUsers = allUsers.filter((u) => {
         const distance = getDistance(
-          u.latitude,
-          u.longitude,
-          user.latitude,
-          user.longitude,
+          u.latitude || 0,
+          u.longitude || 0,
+          user.latitude || 0,
+          user.longitude || 0,
         );
-        return distance <= user.preferredDistance;
+        return distance <= Number(user.preferredDistance);
       });
 
       // Tính toán preferences
@@ -712,12 +713,13 @@ export class GaleShapleyService {
     // Thuc hien loc theo Distance
     const filteredUsers = allUsers.filter((u) => {
       const distance = getDistance(
-        u.latitude,
-        u.longitude,
-        user.latitude,
-        user.longitude,
+        u.latitude || 0,
+        u.longitude || 0,
+        user.latitude || 0,
+        user.longitude || 0,
       );
-      return distance <= user.preferredDistance;
+
+      return distance <= Number(user.preferredDistance);
     });
 
     return this.getUserSuggestionsFromPreference(
@@ -728,10 +730,10 @@ export class GaleShapleyService {
   }
 
   /**
-  * Lấy danh sách gợi ý cho người dùng dựa trên preferences của họ
-  * @param userId ID của người dùng cần lấy gợi ý
-  * @returns Danh sách người dùng được gợi ý kèm theo điểm tương đồng
-  */
+   * Lấy danh sách gợi ý cho người dùng dựa trên preferences của họ
+   * @param userId ID của người dùng cần lấy gợi ý
+   * @returns Danh sách người dùng được gợi ý kèm theo điểm tương đồng
+   */
   async run(userId: string): Promise<UserSuggestion[]> {
     // Kiểm tra người dùng tồn tại
     const user = await this.prisma.user.findUnique({
@@ -769,12 +771,12 @@ export class GaleShapleyService {
     // Thuc hien loc theo Distance
     const filteredUsers = allUsers.filter((u) => {
       const distance = getDistance(
-        u.latitude,
-        u.longitude,
-        user.latitude,
-        user.longitude,
+        u.latitude || 0,
+        u.longitude || 0,
+        user.latitude || 0,
+        user.longitude || 0,
       );
-      return distance <= user.preferredDistance;
+      return distance <= Number(user.preferredDistance);
     });
 
     // Tính toán preferences
@@ -836,6 +838,13 @@ export class GaleShapleyService {
         // Điểm tương đồng
         const similarityScore = similarityScores[i];
 
+        const distance = getDistance(
+          user.latitude || 0,
+          user.longitude || 0,
+          suggestedUser.latitude || 0,
+          suggestedUser.longitude || 0,
+        );
+
         // Thêm vào danh sách gợi ý
         suggestions.push({
           id: suggestedUser.id,
@@ -860,6 +869,7 @@ export class GaleShapleyService {
             sleepHabit: suggestedUser.sleepHabit?.toString() || undefined,
             lookingFor: suggestedUser.lookingFor || undefined,
             rawProfile: suggestedUser.rawProfile || undefined,
+            distance: distance.toFixed(2),
           },
         });
       }
