@@ -10,7 +10,7 @@ import { getDistance } from '@shared/utils/distance';
  * Định nghĩa kiểu User mở rộng với preferences
  */
 type User = Prisma.UserGetPayload<{
-  include: { preferences: true };
+  include: { preferences: true, searchSetting: true };
 }>;
 
 /**
@@ -85,6 +85,7 @@ export class GaleShapleyService {
       const allUsers = await this.prisma.user.findMany({
         include: {
           preferences: true,
+          searchSetting: true,
         },
       });
 
@@ -131,6 +132,7 @@ export class GaleShapleyService {
         },
         include: {
           preferences: true,
+          searchSetting: true,
         },
       });
 
@@ -506,17 +508,58 @@ export class GaleShapleyService {
       // Bỏ qua chính người dùng
       if (potentialMatch.id === user.id) return false;
 
-      // Lọc theo giới tính (đơn giản hóa, có thể mở rộng theo lookingFor)
-      if (user.gender === 'MALE' && potentialMatch.gender !== 'FEMALE')
-        return false;
-      if (user.gender === 'FEMALE' && potentialMatch.gender !== 'MALE')
-        return false;
+      // Lọc theo khoảng cách
+      if (user.searchSetting?.preferredDistance && potentialMatch.longitude && potentialMatch.latitude) {
+        const distance = getDistance(
+          user.latitude || 0,
+          user.longitude || 0,
+          potentialMatch.latitude || 0,
+          potentialMatch.longitude || 0,
+        );
+        if (distance > user.searchSetting.preferredDistance) {
+          return false;
+        };
+      }
 
-      // Lọc theo khoảng cách (nếu có)
-      // Có thể bổ sung thêm các tiêu chí lọc khác ở đây
+      // Lọc theo giới tính
+      if (user.searchSetting?.gender) {
+        if (user.searchSetting?.gender === "MALE" && potentialMatch.gender !== "MALE") {
+          return false;
+        };
+        if (user.searchSetting?.gender === "FEMALE" && potentialMatch.gender !== "FEMALE") {
+          return false;
+        };
+      }
 
+      // Loc theo Bio
+      if (user.searchSetting?.hasBio) {
+        if (!potentialMatch.rawProfile) {
+          return false;
+        };
+      }
+
+      // Lọc theo độ tuổi
+      if (user.searchSetting?.ageRange && potentialMatch.birthday) {
+        const age = this.calculateAge(potentialMatch.birthday.toString());
+        if (age < user.searchSetting.ageRange[0] || age > user.searchSetting.ageRange[1]) {
+          return false;
+        }
+      }
       return true;
     });
+  }
+
+  private calculateAge(birthday: string): number {
+    if (!birthday) return 0;
+
+    const today = new Date();
+    const birthDate = new Date(birthday);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const month = today.getMonth() - birthDate.getMonth();
+    if (month < 0 || (month === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
   }
 
   /**
@@ -658,7 +701,7 @@ export class GaleShapleyService {
 
       // Lấy tất cả người dùng
       const allUsers = await this.prisma.user.findMany({
-        include: { preferences: true },
+        include: { preferences: true, searchSetting: true },
         where: {
           id: {
             notIn: [userId, ...swipedUserIds],
@@ -666,16 +709,7 @@ export class GaleShapleyService {
         },
       });
 
-      // Thuc hien loc theo Distance
-      const filteredUsers = allUsers.filter((u) => {
-        const distance = getDistance(
-          u.latitude || 0,
-          u.longitude || 0,
-          user.latitude || 0,
-          user.longitude || 0,
-        );
-        return distance <= Number(user.searchSetting?.preferredDistance);
-      });
+      const filteredUsers = this.findPotentialMatches(user, allUsers);
 
       // Tính toán preferences
       await this.calculateAndSavePreferences([user], filteredUsers);
@@ -683,7 +717,7 @@ export class GaleShapleyService {
       // Lấy lại người dùng với preferences đã được tính toán
       const updatedUser = await this.prisma.user.findUnique({
         where: { id: userId },
-        include: { preferences: true },
+        include: { preferences: true, searchSetting: true },
       });
 
       if (!updatedUser || !updatedUser.preferences[0]) {
@@ -702,7 +736,7 @@ export class GaleShapleyService {
 
     // Lấy tất cả người dùng để lọc theo preferredOrder
     const allUsers = await this.prisma.user.findMany({
-      include: { preferences: true },
+      include: { preferences: true, searchSetting: true },
       where: {
         id: {
           notIn: [userId, ...swipedUserIds],
@@ -710,18 +744,7 @@ export class GaleShapleyService {
       },
     });
 
-    // Thuc hien loc theo Distance
-    const filteredUsers = allUsers.filter((u) => {
-      const distance = getDistance(
-        u.latitude || 0,
-        u.longitude || 0,
-        user.latitude || 0,
-        user.longitude || 0,
-      );
-
-      return distance <= Number(user.searchSetting?.preferredDistance);
-    });
-
+    const filteredUsers = this.findPotentialMatches(user, allUsers);
     return this.getUserSuggestionsFromPreference(
       user,
       userPreference,
@@ -760,7 +783,7 @@ export class GaleShapleyService {
 
     // Lấy tất cả người dùng
     const allUsers = await this.prisma.user.findMany({
-      include: { preferences: true },
+      include: { preferences: true, searchSetting: true },
       where: {
         id: {
           notIn: [userId, ...swipedUserIds],
@@ -768,24 +791,14 @@ export class GaleShapleyService {
       },
     });
 
-    // Thuc hien loc theo Distance
-    const filteredUsers = allUsers.filter((u) => {
-      const distance = getDistance(
-        u.latitude || 0,
-        u.longitude || 0,
-        user.latitude || 0,
-        user.longitude || 0,
-      );
-      return distance <= Number(user?.searchSetting?.preferredDistance);
-    });
-
+    const filteredUsers = this.findPotentialMatches(user, allUsers);
     // Tính toán preferences
     await this.calculateAndSavePreferences([user], filteredUsers);
 
     // Lấy lại người dùng với preferences đã được tính toán
     const updatedUser = await this.prisma.user.findUnique({
       where: { id: userId },
-      include: { preferences: true },
+      include: { preferences: true, searchSetting: true },
     });
 
     if (!updatedUser || !updatedUser.preferences[0]) {
@@ -832,9 +845,6 @@ export class GaleShapleyService {
         // Bỏ qua nếu là chính người dùng đang xem
         if (suggestedUser.id === user.id) continue;
 
-        // Kiểm tra tiêu chí phù hợp (giới tính, v.v.)
-        if (!this.matchesCriteria(user, suggestedUser)) continue;
-
         // Điểm tương đồng
         const similarityScore = similarityScores[i];
 
@@ -876,23 +886,5 @@ export class GaleShapleyService {
     }
 
     return suggestions;
-  }
-
-  /**
-   * Kiểm tra một người dùng có phù hợp với tiêu chí của người dùng khác không
-   * @param user Người dùng chính
-   * @param potentialMatch Người dùng tiềm năng
-   * @returns true nếu phù hợp, false nếu không
-   */
-  private matchesCriteria(user: User, potentialMatch: User): boolean {
-    // Kiểm tra giới tính
-    if (user.gender === 'MALE' && potentialMatch.gender !== 'FEMALE')
-      return false;
-    if (user.gender === 'FEMALE' && potentialMatch.gender !== 'MALE')
-      return false;
-
-    // Có thể bổ sung thêm các tiêu chí khác ở đây như khoảng cách, độ tuổi, v.v.
-
-    return true;
   }
 }
