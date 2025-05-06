@@ -531,7 +531,7 @@ export class GaleShapleyService {
       images: user.images || [],
       name: user.name || '',
       gender: user.gender as 'MALE' | 'FEMALE' | 'OTHER',
-      preferredDistance: user.preferredDistance || 50,
+      // preferredDistance: user.preferredDistance || 50,
       rawProfile: user.rawProfile || '',
       interests: user.interests || [],
       embeddings: user.embeddings || [],
@@ -627,7 +627,7 @@ export class GaleShapleyService {
     // Kiểm tra người dùng tồn tại
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      include: { preferences: true },
+      include: { preferences: true, searchSetting: true },
     });
 
     if (!user) {
@@ -674,7 +674,7 @@ export class GaleShapleyService {
           user.latitude || 0,
           user.longitude || 0,
         );
-        return distance <= Number(user.preferredDistance);
+        return distance <= Number(user.searchSetting?.preferredDistance);
       });
 
       // Tính toán preferences
@@ -719,7 +719,7 @@ export class GaleShapleyService {
         user.longitude || 0,
       );
 
-      return distance <= Number(user.preferredDistance);
+      return distance <= Number(user.searchSetting?.preferredDistance);
     });
 
     return this.getUserSuggestionsFromPreference(
@@ -738,7 +738,7 @@ export class GaleShapleyService {
     // Kiểm tra người dùng tồn tại
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      include: { preferences: true },
+      include: { preferences: true, searchSetting: true },
     });
 
     if (!user) {
@@ -776,7 +776,7 @@ export class GaleShapleyService {
         user.latitude || 0,
         user.longitude || 0,
       );
-      return distance <= Number(user.preferredDistance);
+      return distance <= Number(user?.searchSetting?.preferredDistance);
     });
 
     // Tính toán preferences

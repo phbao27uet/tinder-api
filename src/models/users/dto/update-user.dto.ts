@@ -9,7 +9,6 @@ import {
   Education,
   ExerciseFrequency,
   FutureFamily,
-  Gender,
   LookingFor,
   LoveLanguage,
   Pets,
@@ -18,7 +17,6 @@ import {
   SocialMediaUsage,
   ZodiacSign,
 } from '@prisma/client';
-
 
 const UpdateUserSchema = z.object({
   rawProfile: z.string().min(1, {

@@ -127,7 +127,6 @@ export class UserService {
           address: 1,
           lat: 1,
           lng: 1,
-          preferredDistance: 1,
           zodiac: 1,
           education: 1,
           futureFamily: 1,
@@ -209,7 +208,6 @@ export class UserService {
         diet: updateDto.diet,
         socialMediaActivity: updateDto.socialMediaActivity,
         sleepHabit: updateDto.sleepHabit,
-        preferredDistance: updateDto.preferredDistance,
       },
     });
 
@@ -236,7 +234,6 @@ export class UserService {
       diet: updateDto.diet,
       socialMediaActivity: updateDto.socialMediaActivity,
       sleepHabit: updateDto.sleepHabit,
-      preferredDistance: updateDto.preferredDistance,
       images: updateDto.images,
     });
 

@@ -65,7 +65,11 @@ export class AuthService {
         sleepHabit: dto.sleepHabit,
         languages: dto.languages,
         shortVideo: dto.shortVideo,
-        preferredDistance: dto.preferredDistance, // JSON
+        searchSetting: {
+          create: {
+            preferredDistance: dto.preferredDistance,
+          }
+        }
       },
     });
 
