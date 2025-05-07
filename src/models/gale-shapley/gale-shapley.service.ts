@@ -5,12 +5,13 @@ import { PrismaService } from '@shared/prisma/prisma.service';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { LlmService, IUserMatch } from '@models/llm/llm.service';
 import { getDistance } from '@shared/utils/distance';
+import { INTERESTS_ARRAY } from '@shared/utils';
 
 /**
  * Định nghĩa kiểu User mở rộng với preferences
  */
 type User = Prisma.UserGetPayload<{
-  include: { preferences: true, searchSetting: true };
+  include: { preferences: true; searchSetting: true };
 }>;
 
 /**
@@ -509,7 +510,11 @@ export class GaleShapleyService {
       if (potentialMatch.id === user.id) return false;
 
       // Lọc theo khoảng cách
-      if (user.searchSetting?.preferredDistance && potentialMatch.longitude && potentialMatch.latitude) {
+      if (
+        user.searchSetting?.preferredDistance &&
+        potentialMatch.longitude &&
+        potentialMatch.latitude
+      ) {
         const distance = getDistance(
           user.latitude || 0,
           user.longitude || 0,
@@ -518,30 +523,39 @@ export class GaleShapleyService {
         );
         if (distance > user.searchSetting.preferredDistance) {
           return false;
-        };
+        }
       }
 
       // Lọc theo giới tính
       if (user.searchSetting?.gender) {
-        if (user.searchSetting?.gender === "MALE" && potentialMatch.gender !== "MALE") {
+        if (
+          user.searchSetting?.gender === 'MALE' &&
+          potentialMatch.gender !== 'MALE'
+        ) {
           return false;
-        };
-        if (user.searchSetting?.gender === "FEMALE" && potentialMatch.gender !== "FEMALE") {
+        }
+        if (
+          user.searchSetting?.gender === 'FEMALE' &&
+          potentialMatch.gender !== 'FEMALE'
+        ) {
           return false;
-        };
+        }
       }
 
       // Loc theo Bio
       if (user.searchSetting?.hasBio) {
         if (!potentialMatch.rawProfile) {
           return false;
-        };
+        }
       }
 
       // Lọc theo độ tuổi
       if (user.searchSetting?.ageRange && potentialMatch.birthday) {
         const age = this.calculateAge(potentialMatch.birthday.toString());
-        if (age < user.searchSetting.ageRange[0] || age > user.searchSetting.ageRange[1]) {
+        if (
+          age < user.searchSetting.ageRange[0] ||
+          age > user.searchSetting.ageRange[1]
+        ) {
           return false;
         }
       }
@@ -886,5 +900,143 @@ export class GaleShapleyService {
     }
 
     return suggestions;
+  }
+
+  async getUserSuggestionsByInterest(
+    userId: string,
+    interestId: string,
+  ): Promise<UserSuggestion[]> {
+    try {
+      // Find the current user
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: { preferences: true, searchSetting: true },
+      });
+
+      if (!user) {
+        throw new NotFoundException('Người dùng không tồn tại');
+      }
+
+      const interests = INTERESTS_ARRAY[interestId];
+
+      // Get users that already have been swiped
+      const swipedUsers = await this.prisma.swipe.findMany({
+        where: {
+          swiperId: userId,
+        },
+        select: {
+          targetUserId: true,
+        },
+      });
+
+      const swipedUserIds = swipedUsers.map((swipe) => swipe.targetUserId);
+
+      // Find users with the specified interest
+      const usersWithInterest = await this.prisma.user.findMany({
+        where: {
+          id: {
+            notIn: [userId, ...swipedUserIds], // Exclude current user and swiped users
+          },
+        },
+        include: { preferences: true, searchSetting: true },
+      });
+
+      // Apply search settings filters if available
+
+      const filteredUsersByInterests = this.filterByInterests(
+        interests,
+        usersWithInterest,
+      );
+
+      const filteredUsers = this.findPotentialMatches(
+        user,
+        filteredUsersByInterests,
+      );
+
+      const suggestions: UserSuggestion[] = [];
+      // Generate suggestions from filtered users
+      for (const suggestedUser of filteredUsers) {
+        // Calculate similarity score based on common interests
+        const userInterests = new Set(user.interests || []);
+        const suggestedUserInterests = new Set(suggestedUser.interests || []);
+        const commonInterests = [...userInterests].filter((interest) =>
+          suggestedUserInterests.has(interest),
+        );
+
+        // Simple similarity calculation: percentage of interests in common
+        const similarityScore =
+          (commonInterests.length /
+            Math.max(
+              1,
+              Math.max(userInterests.size, suggestedUserInterests.size),
+            )) *
+          100;
+
+        // Calculate distance between users
+        const distance = getDistance(
+          user.latitude || 0,
+          user.longitude || 0,
+          suggestedUser.latitude || 0,
+          suggestedUser.longitude || 0,
+        );
+
+        // Add to suggestions list
+        suggestions.push({
+          id: suggestedUser.id,
+          name: suggestedUser.name || '',
+          images: suggestedUser.images || [],
+          gender: suggestedUser.gender || '',
+          similarityScore,
+          interests: suggestedUser.interests || [],
+          additionalInfo: {
+            education: suggestedUser.education || undefined,
+            zodiac: suggestedUser.zodiac || undefined,
+            communicationStyle: suggestedUser.communicationStyle || undefined,
+            loveLanguage: suggestedUser.loveLanguage || undefined,
+            pet: suggestedUser.pet?.toString() || undefined,
+            alcoholConsumption:
+              suggestedUser.alcoholConsumption?.toString() || undefined,
+            smoking: suggestedUser.smoking?.toString() || undefined,
+            exerciseHabit: suggestedUser.exerciseHabit?.toString() || undefined,
+            diet: suggestedUser.diet?.toString() || undefined,
+            socialMediaActivity:
+              suggestedUser.socialMediaActivity?.toString() || undefined,
+            sleepHabit: suggestedUser.sleepHabit?.toString() || undefined,
+            lookingFor: suggestedUser.lookingFor || undefined,
+            rawProfile: suggestedUser.rawProfile || undefined,
+            distance: distance.toFixed(2),
+          },
+        });
+      }
+
+      // Sort by similarity score descending
+      return suggestions.sort((a, b) => b.similarityScore - a.similarityScore);
+    } catch (err: any) {
+      console.log(err);
+      return [];
+    }
+  }
+
+  private filterByInterests(
+    interests: string[],
+    potentialMatches: User[],
+  ): User[] {
+    return potentialMatches.filter((match) => {
+      return (
+        match.interests.some((interest) => interests?.includes(interest)) ||
+        interests.includes(match?.lookingFor || '') ||
+        interests.includes(match?.socialMediaActivity || '') ||
+        interests.includes(match?.alcoholConsumption || '') ||
+        interests.includes(match?.smoking || '') ||
+        interests.includes(match?.exerciseHabit || '') ||
+        interests.includes(match?.diet || '') ||
+        interests.includes(match?.sleepHabit || '') ||
+        interests.includes(match?.communicationStyle || '') ||
+        interests.includes(match?.loveLanguage || '') ||
+        interests.includes(match?.pet || '') ||
+        interests.includes(match?.education || '') ||
+        interests.includes(match?.zodiac || '')
+      );
+    });
   }
 }

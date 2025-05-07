@@ -1,5 +1,5 @@
 // gale-shapley.controller.ts
-import { Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { GaleShapleyService } from './gale-shapley.service';
 import { AuthGuard } from '@models/auth/guards/auth.guard';
 import { Auth, GetCurrentUserId } from '@shared/decorators';
@@ -12,6 +12,18 @@ export class GaleShapleyController {
   @Get('')
   async getUserSuggestions1(@GetCurrentUserId() userId: string) {
     return this.galeShapleyService.getUserSuggestions(userId);
+  }
+
+  @Auth('USER')
+  @Get('by-interest')
+  async getUserSuggestionsByInterest(
+    @GetCurrentUserId() userId: string,
+    @Query('interestId') interestId: string,
+  ) {
+    return this.galeShapleyService.getUserSuggestionsByInterest(
+      userId,
+      interestId,
+    );
   }
 
   @Auth('USER')
