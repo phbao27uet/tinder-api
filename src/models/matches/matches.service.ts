@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '@shared/prisma';
 import { LangChainService } from '../langchain/langchain.service';
+import { MessagesService } from '../messages/messages.service';
 import { MatchStatus } from '@shared/enums/match-status.enum';
 import { Direction } from '@prisma/client';
 
@@ -9,6 +10,7 @@ export class MatchesService {
   constructor(
     private prisma: PrismaService,
     private langchainService: LangChainService,
+    private messagesService: MessagesService,
     // eslint-disable-next-line prettier/prettier
   ) { }
 
@@ -242,6 +244,19 @@ export class MatchesService {
             where: { id: targetUserId },
             data: { superLikesCount: { increment: 1 } }
           });
+        }
+
+        try {
+          const welcomeMessage = 'Chúc mừng! Các bạn đã match với nhau 🎉';
+          
+          await this.messagesService.sendMessage({
+            senderId: swiperId,
+            receiverId: targetUserId,
+            matchId: newMatch.id,
+            content: welcomeMessage
+          });
+        } catch (error) {
+          console.error('Lỗi khi gửi tin nhắn chào mừng:', error);
         }
 
         return {

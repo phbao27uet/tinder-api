@@ -899,7 +899,7 @@ export class GaleShapleyService {
       }
     }
 
-    return suggestions;
+    return suggestions.sort((a, b) => a.similarityScore - b.similarityScore);
   }
 
   async getUserSuggestionsByInterest(
@@ -1009,8 +1009,8 @@ export class GaleShapleyService {
         });
       }
 
-      // Sort by similarity score descending
-      return suggestions.sort((a, b) => b.similarityScore - a.similarityScore);
+      // Sap xep tu thap den cao ==> stack thi diem cao se o tren
+      return suggestions.sort((a, b) => a.similarityScore - b.similarityScore);
     } catch (err: any) {
       console.log(err);
       return [];
