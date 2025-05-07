@@ -19,7 +19,6 @@ model User {
   birthday          DateTime?
   gender            Gender?
   // location     Json? // GeoJSON format for geospatial queries
-  preferredDistance Int?
   likesCount        Int       @default(0) // Số lượt được like
   superLikesCount   Int       @default(0) // Số lượt được super like
 
@@ -56,28 +55,29 @@ model User {
 
   swipers        Swipe[]         @relation("swiper")
   targetUsers    Swipe[]         @relation("targetUser")
-  searchSettings SearchSetting[]
 
   lastIndexed DateTime? @default(now())
+  latitude  Float?
+  longitude Float?
 
   vipSubscription VipSubscription?
   sentMessages     Message[] @relation("SentMessages")
   receivedMessages Message[] @relation("ReceivedMessages")
+
+  searchSetting SearchSetting?
 }
 
 model SearchSetting {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId      String   @db.ObjectId
+  userId      String   @db.ObjectId @unique
   user        User     @relation(fields: [userId], references: [id])
+
   ageRange    Int[] // [minAge, maxAge]
-  gender      Gender? // "male", "female", "other"
-  maxDistance Int? // Khoảng cách tối đa (km)
-  interests   String[] // Các sở thích ưu tiên
-  hasBio      Boolean?
+  gender      GenderPreference? // Giới tính mong muốn
+  preferredDistance Int? // Khoảng cách mong muốn
+  hasBio      Boolean? // Có tiểu sử không
 
   lastUpdated DateTime @default(now())
-
-  @@index([userId])
 }
 
 model Swipe {
@@ -183,6 +183,12 @@ enum Role {
 enum Gender {
   MALE
   FEMALE
+}
+
+enum GenderPreference {
+  MALE
+  FEMALE
+  BOTH
 }
 
 // User: Lưu trữ thông tin người dùng và embeddings.

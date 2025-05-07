@@ -34,7 +34,7 @@ export interface IUserMatch {
   images: string[];
   name: string;
   gender: 'MALE' | 'FEMALE' | 'OTHER';
-  preferredDistance: number;
+  // preferredDistance: number;
   rawProfile: string;
   interests: string[]; // Có thể tạo enum nếu bạn cần giới hạn giá trị
   embeddings: number[];

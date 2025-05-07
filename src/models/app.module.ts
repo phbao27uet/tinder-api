@@ -14,6 +14,7 @@ import { MatchesModule } from './matches/matches.module';
 import { MessagesModule } from './messages/messages.module';
 import { VipModule } from './vip/vip.module';
 import { PaymentModule } from './payment/payment.module';
+import { SearchSettingsModule } from './search-settings/search-settings.module';
 
 @Module({
   imports: [
@@ -31,7 +32,8 @@ import { PaymentModule } from './payment/payment.module';
     ScheduleModule.forRoot(),
     MessagesModule,
     VipModule,
-    PaymentModule
+    PaymentModule,
+    SearchSettingsModule,
   ],
   controllers: [AppController],
   providers: [
@@ -41,4 +43,4 @@ import { PaymentModule } from './payment/payment.module';
     },
   ],
 })
-export class AppModule { }
+export class AppModule {}

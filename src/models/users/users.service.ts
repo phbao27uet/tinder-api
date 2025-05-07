@@ -7,6 +7,7 @@ import { ChangePasswordDto, UpdateUserDto } from './dto/update-user.dto';
 import { hashPassword } from '@shared/utils';
 import { IUserMatch, LlmService } from '@models/llm/llm.service';
 import { GaleShapleyService } from '@models/gale-shapley/gale-shapley.service';
+import { UpdateLocationDto } from './dto/update-location.dto';
 
 @Injectable()
 export class UserService {
@@ -126,7 +127,6 @@ export class UserService {
           address: 1,
           lat: 1,
           lng: 1,
-          preferredDistance: 1,
           zodiac: 1,
           education: 1,
           futureFamily: 1,
@@ -208,7 +208,6 @@ export class UserService {
         diet: updateDto.diet,
         socialMediaActivity: updateDto.socialMediaActivity,
         sleepHabit: updateDto.sleepHabit,
-        preferredDistance: updateDto.preferredDistance,
       },
     });
 
@@ -235,7 +234,6 @@ export class UserService {
       diet: updateDto.diet,
       socialMediaActivity: updateDto.socialMediaActivity,
       sleepHabit: updateDto.sleepHabit,
-      preferredDistance: updateDto.preferredDistance,
       images: updateDto.images,
     });
 
@@ -374,5 +372,29 @@ export class UserService {
         lastMessage: match.messages[0] || null,
       };
     });
+  }
+
+  async updateLocation(id: string, updateDto: UpdateLocationDto) {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        id,
+      },
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+    
+    const userUpdated = await this.prisma.user.update({
+      where: {
+        id,
+      },
+      data: {
+        latitude: updateDto.latitude,
+        longitude: updateDto.longitude,
+      },
+    });
+
+    return userUpdated;
   }
 }
