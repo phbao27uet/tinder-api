@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '@shared/prisma';
 import { LangChainService } from '../langchain/langchain.service';
 import { MessagesService } from '../messages/messages.service';
@@ -157,11 +161,15 @@ export class MatchesService {
   /**
    * Create a new swipe record (like, dislike, superlike)
    */
-  async createSwipe(swiperId: string, targetUserId: string, direction: Direction) {
+  async createSwipe(
+    swiperId: string,
+    targetUserId: string,
+    direction: Direction,
+  ) {
     // Kiểm tra người dùng tồn tại
     const [swiper, targetUser] = await Promise.all([
       this.prisma.user.findUnique({ where: { id: swiperId } }),
-      this.prisma.user.findUnique({ where: { id: targetUserId } })
+      this.prisma.user.findUnique({ where: { id: targetUserId } }),
     ]);
 
     if (!swiper || !targetUser) {
@@ -172,12 +180,14 @@ export class MatchesService {
     const existingSwipe = await this.prisma.swipe.findFirst({
       where: {
         swiperId,
-        targetUserId
-      }
+        targetUserId,
+      },
     });
 
     if (existingSwipe) {
-      throw new ConflictException('Bạn đã thực hiện swipe với người dùng này rồi');
+      throw new ConflictException(
+        'Bạn đã thực hiện swipe với người dùng này rồi',
+      );
     }
 
     // Tạo swipe mới
@@ -185,8 +195,8 @@ export class MatchesService {
       data: {
         swiperId,
         targetUserId,
-        direction
-      }
+        direction,
+      },
     });
 
     // Nếu là like hoặc superlike, kiểm tra match
@@ -196,9 +206,9 @@ export class MatchesService {
           swiperId: targetUserId,
           targetUserId: swiperId,
           direction: {
-            in: [Direction.RIGHT, Direction.UP]
-          }
-        }
+            in: [Direction.RIGHT, Direction.UP],
+          },
+        },
       });
 
       // Nếu có match
@@ -207,12 +217,12 @@ export class MatchesService {
         await Promise.all([
           this.prisma.swipe.update({
             where: { id: swipe.id },
-            data: { isMatched: true }
+            data: { isMatched: true },
           }),
           this.prisma.swipe.update({
             where: { id: oppositeSwipe.id },
-            data: { isMatched: true }
-          })
+            data: { isMatched: true },
+          }),
         ]);
 
         // Tạo match mới
@@ -220,40 +230,37 @@ export class MatchesService {
           data: {
             userIDs: [swiperId, targetUserId],
             users: {
-              connect: [
-                { id: swiperId },
-                { id: targetUserId }
-              ]
+              connect: [{ id: swiperId }, { id: targetUserId }],
             },
             status: MatchStatus.ACCEPTED,
-            stabilityScore: 1.0 // Score mặc định cho match trực tiếp
+            stabilityScore: 1.0, // Score mặc định cho match trực tiếp
           },
           include: {
-            users: true
-          }
+            users: true,
+          },
         });
 
         // Cập nhật thống kê
         if (direction === Direction.RIGHT) {
           await this.prisma.user.update({
             where: { id: targetUserId },
-            data: { likesCount: { increment: 1 } }
+            data: { likesCount: { increment: 1 } },
           });
         } else if (direction === Direction.UP) {
           await this.prisma.user.update({
             where: { id: targetUserId },
-            data: { superLikesCount: { increment: 1 } }
+            data: { superLikesCount: { increment: 1 } },
           });
         }
 
         try {
           const welcomeMessage = 'Chúc mừng! Các bạn đã match với nhau 🎉';
-          
+
           await this.messagesService.sendMessage({
             senderId: swiperId,
             receiverId: targetUserId,
             matchId: newMatch.id,
-            content: welcomeMessage
+            content: welcomeMessage,
           });
         } catch (error) {
           console.error('Lỗi khi gửi tin nhắn chào mừng:', error);
@@ -262,7 +269,7 @@ export class MatchesService {
         return {
           swipe,
           match: newMatch,
-          isMatched: true
+          isMatched: true,
         };
       }
 
@@ -270,19 +277,19 @@ export class MatchesService {
       if (direction === Direction.RIGHT) {
         await this.prisma.user.update({
           where: { id: targetUserId },
-          data: { likesCount: { increment: 1 } }
+          data: { likesCount: { increment: 1 } },
         });
       } else if (direction === Direction.UP) {
         await this.prisma.user.update({
           where: { id: targetUserId },
-          data: { superLikesCount: { increment: 1 } }
+          data: { superLikesCount: { increment: 1 } },
         });
       }
     }
 
     return {
       swipe,
-      isMatched: false
+      isMatched: false,
     };
   }
 
