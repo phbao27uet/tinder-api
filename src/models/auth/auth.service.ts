@@ -69,7 +69,9 @@ export class AuthService {
           create: {
             preferredDistance: dto.preferredDistance,
           }
-        }
+        },
+        longitude: dto.longitude || 105.796249953294,
+        latitude: dto.latitude || 21.027768626868,
       },
     });
 

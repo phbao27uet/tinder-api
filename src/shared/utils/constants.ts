@@ -130,7 +130,7 @@ export const ZODIAC_SIGN = {
 export const GENDER = {
   MALE: 'Nam',
   FEMALE: 'Nữ',
-  OTHER: 'Khác',
+  // OTHER: 'Khác',
 };
 
 export const INTERESTS = {

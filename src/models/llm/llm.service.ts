@@ -104,7 +104,9 @@ export class LlmService {
 
       // Bước 1: Xử lý với Gemini để trích xuất các thông tin từ Bio
       const dynamicPrompt = this.createDynamicPrompt(formData.rawProfile);
-      const model = this.gemini.getGenerativeModel({ model: 'gemini-1.5-pro' });
+      const model = this.gemini.getGenerativeModel({
+        model: 'gemini-2.0-flash-exp',
+      });
       const result = await model.generateContent(dynamicPrompt);
       const text = result.response.text();
       const json = this.parseGeminiResponse(text);
@@ -199,7 +201,9 @@ export class LlmService {
     `;
   }
 
-  private parseGeminiResponse(responseText: string): any {
+  private parseGeminiResponse(responseText: string): {
+    interests: string[];
+  } {
     try {
       const cleanText = responseText
         .replace(/```json/g, '')
@@ -209,7 +213,9 @@ export class LlmService {
       return JSON.parse(cleanText);
     } catch (err: any) {
       this.logger.error('Lỗi phân tích phản hồi từ Gemini', err.stack);
-      throw new InternalServerErrorException('Lỗi xử lý dữ liệu AI');
+      return {
+        interests: [],
+      };
     }
   }
 
@@ -350,7 +356,9 @@ export class LlmService {
     }>,
   ) {
     // Khởi tạo Gemini model
-    const model = this.gemini.getGenerativeModel({ model: 'gemini-1.5-pro' });
+    const model = this.gemini.getGenerativeModel({
+      model: 'gemini-2.0-flash-exp',
+    });
 
     // Tạo thông tin người dùng dưới dạng text cho từng match
     const userProfileText = this.createUserText(userProfile);

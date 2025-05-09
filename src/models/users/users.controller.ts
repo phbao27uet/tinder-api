@@ -6,6 +6,7 @@ import {
   Get,
   Param,
   Patch,
+  Post,
   Query,
 } from '@nestjs/common';
 import { UserService } from './users.service';
@@ -22,6 +23,11 @@ export class UserController {
   @Get()
   async findAll(@Query() queryDto: DefaultFindAllQueryDto) {
     return this.userService.findAll(queryDto);
+  }
+
+  @Post('generate')
+  async generate() {
+    return this.userService.generate();
   }
 
   @Auth('USER')

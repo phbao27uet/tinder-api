@@ -8,6 +8,25 @@ import { hashPassword } from '@shared/utils';
 import { IUserMatch, LlmService } from '@models/llm/llm.service';
 import { GaleShapleyService } from '@models/gale-shapley/gale-shapley.service';
 import { UpdateLocationDto } from './dto/update-location.dto';
+import {
+  DESCRIPTIONS,
+  GENDER,
+  INTERESTS,
+  EDUCATION,
+  COMMUNICATION_STYLE,
+  LOVE_LANGUAGE,
+  PETS,
+  ALCOHOL_CONSUMPTION,
+  SMOKING_PREFERENCE,
+  EXERCISE_FREQUENCY,
+  DIETARY_PREFERENCE,
+  SOCIAL_MEDIA_USAGE,
+  SLEEP_PATTERN,
+  LOOKING_FOR,
+  ZODIAC_SIGN,
+} from '@shared/utils/constants';
+import { SignUpDto } from '@models/auth/dto/sign-up.dto';
+import { AuthService } from '@models/auth/auth.service';
 
 @Injectable()
 export class UserService {
@@ -15,7 +34,8 @@ export class UserService {
     private prisma: PrismaService,
     private llmService: LlmService,
     private galeShapleyService: GaleShapleyService,
-  ) {}
+    private authService: AuthService,
+  ) { }
 
   async findAll(defaultFindAllQuery: DefaultFindAllQueryDto) {
     const {
@@ -301,7 +321,6 @@ export class UserService {
     });
   }
 
-  
   async getSubscriptionHistory(userId: string) {
     // Get user's current and past VIP subscriptions
     const subscriptionHistory = await this.prisma.vipSubscription.findMany({
@@ -315,7 +334,7 @@ export class UserService {
         createdAt: 'desc',
       },
     });
-    
+
     return subscriptionHistory.map(subscription => ({
       id: subscription.id,
       packageName: subscription.vipPackage.name,
@@ -359,11 +378,11 @@ export class UserService {
         matchDate: 'desc',
       },
     });
-    
+
     return matches.map(match => {
       // Find the other user in the match (not the current user)
       const otherUser = match.users.find(user => user.id !== userId);
-      
+
       return {
         id: match.id,
         matchDate: match.matchDate,
@@ -384,7 +403,7 @@ export class UserService {
     if (!user) {
       throw new Error('User not found');
     }
-    
+
     const userUpdated = await this.prisma.user.update({
       where: {
         id,
@@ -396,5 +415,98 @@ export class UserService {
     });
 
     return userUpdated;
+  }
+
+  async generate() {
+    // Base sample data provided in the request
+    const baseSample = {
+      email: 'tider3@gmail.com',
+      password: '123123aa',
+      name: 'Tinder 3',
+      images: [
+        'https://firebasestorage.googleapis.com/v0/b/file-storage-6ac01.appspot.com/o/tinder%2Fimages%2F2025%2F05%2F06%2F25DA37F7-9604-4555-A4F3-A435A5A9871F.jpg?alt=media',
+        'https://firebasestorage.googleapis.com/v0/b/file-storage-6ac01.appspot.com/o/tinder%2Fimages%2F2025%2F05%2F06%2FC5D7D47F-0E60-47BD-8F3B-39A79D8A6EB4.jpg?alt=media',
+      ],
+    };
+
+    // Pre-compute hashed password once
+    const hashedPassword = await hashPassword(baseSample.password);
+
+    // Helper to pick a random item from an array
+    const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+
+    const genderKeys = Object.keys(GENDER);
+    const interestKeys = Object.keys(INTERESTS);
+
+    const lookingForKeys = Object.keys(LOOKING_FOR);
+    const zodiacKeys = Object.keys(ZODIAC_SIGN);
+    const educationKeys = Object.keys(EDUCATION);
+    const commKeys = Object.keys(COMMUNICATION_STYLE);
+    const loveLangKeys = Object.keys(LOVE_LANGUAGE);
+    const petKeys = Object.keys(PETS);
+    const alcoholKeys = Object.keys(ALCOHOL_CONSUMPTION);
+    const smokingKeys = Object.keys(SMOKING_PREFERENCE);
+    const exerciseKeys = Object.keys(EXERCISE_FREQUENCY);
+    const dietKeys = Object.keys(DIETARY_PREFERENCE);
+    const socialKeys = Object.keys(SOCIAL_MEDIA_USAGE);
+    const sleepKeys = Object.keys(SLEEP_PATTERN);
+
+    // Build 50 random users
+    for (let i = 5; i <= 50; i++) {
+      console.log(`Generated user ${i}`);
+      const userData: SignUpDto = {
+        email: '',
+        password: '',
+        name: '',
+        images: [
+          'https://firebasestorage.googleapis.com/v0/b/file-storage-6ac01.appspot.com/o/tinder%2Fimages%2F2025%2F05%2F06%2F25DA37F7-9604-4555-A4F3-A435A5A9871F.jpg?alt=media',
+          'https://firebasestorage.googleapis.com/v0/b/file-storage-6ac01.appspot.com/o/tinder%2Fimages%2F2025%2F05%2F06%2FC5D7D47F-0E60-47BD-8F3B-39A79D8A6EB4.jpg?alt=media',
+        ],
+        rawProfile: '',
+      }
+
+
+      const idx = i;
+
+      // Generate unique email and name
+      const email = `tinder${idx}@gmail.com`;
+      const name = `Tinder ${idx}`;
+
+      // Random interests (3-6 unique interests)
+      const interestsSet = new Set<string>();
+      const interestsCount = 3 + Math.floor(Math.random() * 4); // 3-6
+      while (interestsSet.size < interestsCount) {
+        interestsSet.add(pick(interestKeys));
+      }
+
+      userData.email = email;
+      userData.password = hashedPassword;
+      userData.name = name;
+      userData.gender = pick(genderKeys) as any;
+      userData.rawProfile = pick(DESCRIPTIONS);
+      userData.interests = Array.from(interestsSet) as any;
+      userData.lookingFor = pick(lookingForKeys) as any;
+      userData.zodiacSign = pick(zodiacKeys) as any;
+      userData.education = pick(educationKeys) as any;
+      userData.communicationStyle = pick(commKeys) as any;
+      userData.loveLanguage = pick(loveLangKeys) as any;
+      userData.pet = pick(petKeys) as any;
+      userData.alcoholConsumption = pick(alcoholKeys) as any;
+      userData.smoking = pick(smokingKeys) as any;
+      userData.exerciseHabit = pick(exerciseKeys) as any;
+      userData.diet = pick(dietKeys) as any;
+      userData.socialMediaActivity = pick(socialKeys) as any;
+      userData.sleepHabit = pick(sleepKeys) as any;
+      // Giá trị mặc định cho preferredDistance trong searchSetting
+      userData.preferredDistance = Math.floor(Math.random() * 100);
+
+      await this.authService.signup(userData);
+
+      console.log(`Generated user ${i} successfully`);
+      console.log(`Waiting for 60 seconds before generating user ${i + 1}`);
+      await new Promise((resolve) => setTimeout(resolve, 60000));
+    }
+
+    return { message: `Generated users successfully` };
   }
 }

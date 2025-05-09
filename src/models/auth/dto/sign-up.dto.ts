@@ -51,9 +51,11 @@ const SignUpSchema = z.object({
   sleepHabit: z.nativeEnum(SleepPattern).optional(),
   shortVideo: z.string().optional(),
   preferredDistance: z.number().optional(),
+  longitude: z.number().optional(),
+  latitude: z.number().optional(),
 });
 
-export class SignUpDto extends createZodDto(SignUpSchema) { }
+export class SignUpDto extends createZodDto(SignUpSchema) {}
 
 const checkEmailSchema = z.object({
   email: z.string().min(1, {
@@ -61,4 +63,4 @@ const checkEmailSchema = z.object({
   }),
 });
 
-export class CheckEmailDto extends createZodDto(checkEmailSchema) { }
+export class CheckEmailDto extends createZodDto(checkEmailSchema) {}
