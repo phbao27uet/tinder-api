@@ -49,7 +49,7 @@ export class AuthService {
         rawProfile: dto.rawProfile,
         interests: dto.interests as any,
         education: dto.education,
-        birthday: dto.birthday || new Date(2002, 1, 1),
+        birthday: new Date(dto.birthday || '2002-01-01'),
         gender: dto.gender,
         lookingFor: dto.lookingFor,
         zodiac: dto.zodiacSign,

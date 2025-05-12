@@ -27,7 +27,7 @@ const SignUpSchema = z.object({
   name: z.string().min(1, {
     message: 'Tên không được để trống',
   }),
-  birthday: z.date().optional(),
+  birthday: z.string().optional(),
   gender: z.nativeEnum(Gender).optional(),
   rawProfile: z.string().min(1, {
     message: 'Thông tin không được để trống',
