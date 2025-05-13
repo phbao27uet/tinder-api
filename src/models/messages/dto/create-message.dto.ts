@@ -1,29 +1,13 @@
-import { IsOptional, IsString, IsUUID } from 'class-validator';
+import { z } from 'nestjs-zod/z';
+import { createZodDto } from 'nestjs-zod';
 
-export class CreateMessageDto {
-  @IsUUID()
-  senderId: string;
+const CreateMessageSchema = z.object({
+  senderId: z.string().uuid(),
+  receiverId: z.string().uuid(),
+  matchId: z.string().uuid().optional(),
+  content: z.string().optional(),
+  imageUrl: z.string().optional(),
+  messageType: z.enum(['TEXT', 'IMAGE']).optional(),
+});
 
-  @IsUUID()
-  receiverId: string;
-
-  @IsUUID()
-  @IsOptional()
-  matchId?: string;
-
-  @IsString()
-  @IsOptional()
-  content?: string;
-
-  @IsString()
-  @IsOptional()
-  imageUrl?: string;
-
-  @IsString()
-  @IsOptional()
-  audioTranscription?: string;
-
-  @IsString()
-  @IsOptional()
-  messageType?: 'text' | 'image' | 'audio';
-}
+export class CreateMessageDto extends createZodDto(CreateMessageSchema) {}
