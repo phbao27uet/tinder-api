@@ -16,13 +16,18 @@ export class UploadController {
   @UseInterceptors(FileInterceptor('file')) // Sử dụng FileInterceptor để nhận file từ client
   async uploadFeatureImage(@UploadedFile() file: Express.Multer.File) {
     // Gọi service để upload ảnh và trả về URL ảnh đã upload
-    const imageUrl = await this.uploadService.uploadFeatureImage(
-      file.buffer,
-      file.originalname,
-    );
+    try {
+      const imageUrl = await this.uploadService.uploadFeatureImage(
+        file.buffer,
+        file.originalname,
+      );
 
-    // Trả về URL ảnh
-    return { url: imageUrl };
+      // Trả về URL ảnh
+      return { url: imageUrl };
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      throw error;
+    }
   }
 
   @Post('multiple')

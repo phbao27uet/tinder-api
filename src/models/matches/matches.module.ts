@@ -5,9 +5,16 @@ import { PrismaModule } from '@shared/prisma/prisma.module';
 import { GaleShapleyModule } from '../gale-shapley/gale-shapley.module';
 import { LangChainModule } from '../langchain/langchain.module';
 import { MessagesModule } from '../messages/messages.module';
+import { LlmModule } from '@models/llm/llm.module';
 
 @Module({
-  imports: [PrismaModule, GaleShapleyModule, LangChainModule, MessagesModule],
+  imports: [
+    PrismaModule,
+    GaleShapleyModule,
+    LangChainModule,
+    MessagesModule,
+    LlmModule,
+  ],
   controllers: [MatchesController],
   providers: [MatchesService],
   exports: [MatchesService],
