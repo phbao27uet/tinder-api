@@ -264,6 +264,24 @@ export class MatchesService {
             matchId: newMatch.id,
             content: welcomeMessage,
           });
+
+          const conversationStarters = await this.generateConversationStarters(
+            swiperId,
+            targetUserId,
+          );
+
+          if (conversationStarters.length) {
+            const randomIndex = Math.floor(Math.random() * conversationStarters.length);
+            let randomStarter = conversationStarters[randomIndex];
+            randomStarter = randomStarter.replaceAll('"', '')
+
+            await this.messagesService.sendMessage({
+              senderId: swiperId,
+              receiverId: targetUserId,
+              matchId: newMatch.id,
+              content: randomStarter,
+            });
+          }
         } catch (error) {
           console.error('Lỗi khi gửi tin nhắn chào mừng:', error);
         }

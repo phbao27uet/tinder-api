@@ -219,8 +219,6 @@ export class MessagesService {
       },
     });
 
-    console.log(newMessage);
-
     return newMessage;
   }
 }
