@@ -26,8 +26,14 @@ export class MessagesService {
   async sendMessage(dto: CreateMessageDto) {
     return this.prisma.message.create({
       data: {
-        ...dto,
+        senderId: dto.senderId,
+        receiverId: dto.receiverId,
+        matchId: dto.matchId,
+        timestamp: new Date(),
+        read: false,
+        imageUrl: dto.imageUrl,
         content: dto.content || '',
+        messageType: dto.messageType || 'TEXT',
       },
     });
   }
