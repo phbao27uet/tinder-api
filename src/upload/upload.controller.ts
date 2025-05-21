@@ -41,4 +41,39 @@ export class UploadController {
 
     return { urls: uploadedUrls };
   }
+
+  @Post('audio')
+  @UseInterceptors(FileInterceptor('audio')) // Sử dụng FileInterceptor để nhận file audio từ client
+  async uploadAudio(@UploadedFile() file: Express.Multer.File) {
+    try {
+      // Gọi service để upload audio và trả về URL của file đã upload
+      const audioUrl = await this.uploadService.uploadAudio(
+        file.buffer,
+        file.originalname,
+      );
+
+      // Trả về URL audio
+      return { url: audioUrl };
+    } catch (error) {
+      console.error('Error uploading audio:', error);
+      throw error;
+    }
+  }
+
+  @Post('multiple-audio')
+  @UseInterceptors(FilesInterceptor('audioFiles')) // Cho phép upload nhiều file audio
+  async uploadMultipleAudio(@UploadedFiles() files: Express.Multer.File[]) {
+    try {
+      const uploadedUrls = await Promise.all(
+        files.map((file) =>
+          this.uploadService.uploadAudio(file.buffer, file.originalname),
+        ),
+      );
+
+      return { urls: uploadedUrls };
+    } catch (error) {
+      console.error('Error uploading multiple audio files:', error);
+      throw error;
+    }
+  }
 }
