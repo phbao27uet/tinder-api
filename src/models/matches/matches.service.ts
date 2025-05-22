@@ -8,6 +8,7 @@ import { LangChainService } from '../langchain/langchain.service';
 import { MessagesService } from '../messages/messages.service';
 import { MatchStatus } from '@shared/enums/match-status.enum';
 import { Direction } from '@prisma/client';
+import { LlmService } from '@models/llm/llm.service';
 
 @Injectable()
 export class MatchesService {
@@ -15,6 +16,7 @@ export class MatchesService {
     private prisma: PrismaService,
     private langchainService: LangChainService,
     private messagesService: MessagesService,
+    private llmService: LlmService,
     // eslint-disable-next-line prettier/prettier
   ) { }
 
@@ -262,6 +264,24 @@ export class MatchesService {
             matchId: newMatch.id,
             content: welcomeMessage,
           });
+
+          const conversationStarters = await this.generateConversationStarters(
+            swiperId,
+            targetUserId,
+          );
+
+          if (conversationStarters.length) {
+            const randomIndex = Math.floor(Math.random() * conversationStarters.length);
+            let randomStarter = conversationStarters[randomIndex];
+            randomStarter = randomStarter.replaceAll('"', '')
+
+            await this.messagesService.sendMessage({
+              senderId: swiperId,
+              receiverId: targetUserId,
+              matchId: newMatch.id,
+              content: randomStarter,
+            });
+          }
         } catch (error) {
           console.error('Lỗi khi gửi tin nhắn chào mừng:', error);
         }
@@ -309,40 +329,18 @@ export class MatchesService {
         return [];
       }
 
-      // Use Gemini to generate conversation starters
-      const model = this.langchainService['gemini'].getGenerativeModel({
-        model: 'gemini-pro',
-      });
-
-      const prompt = `
-      Generate 3 creative and personalized conversation starters for these two people:
-      
-      Person 1: 
-      - Interests: ${user1.interests?.join(', ') || 'Unknown'}
-      - Bio: ${user1.rawProfile || 'No bio provided'}
-      
-      Person 2:
-      - Interests: ${user2.interests?.join(', ') || 'Unknown'}
-      - Bio: ${user2.rawProfile || 'No bio provided'}
-      
-      Focus on their shared interests or complementary traits.
-      Return ONLY the 3 conversation starters without any extra text, one per line.
-      `;
-
-      const response = await model.generateContent(prompt);
-      const suggestions = response.response
-        .text()
-        .split('\n')
-        .filter((line) => line.trim().length > 0)
-        .slice(0, 3);
+      const suggestions = await this.llmService.generateConversationStarters(
+        user1,
+        user2,
+      );
 
       return suggestions;
     } catch (error) {
       console.error('Error generating conversation starters:', error);
       return [
-        "What's your favorite way to spend a weekend?",
-        "What's something you're really passionate about?",
-        'Do you have any upcoming travel plans?',
+        'Cuối tuần bạn thích dành thời gian như thế nào nhất?',
+        'Điều gì khiến bạn thực sự đam mê?',
+        'Bạn có kế hoạch du lịch nào sắp tới không?',
       ];
     }
   }

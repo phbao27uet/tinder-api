@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import * as admin from 'firebase-admin'; // Firebase Admin SDK
 import * as serviceAccount from './serviceAccountKey.json';
+import * as path from 'path';
 
 @Injectable()
 export class UploadService {
@@ -33,6 +34,34 @@ export class UploadService {
     });
 
     // Trả về URL ảnh
+    return `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(uniqueFilename)}?alt=media`;
+  }
+
+  // Hàm để upload audio lên Firebase Storage và trả về URL
+  async uploadAudio(file: Buffer, filename: string): Promise<string> {
+    const bucket = admin.storage().bucket(); // Lấy bucket mặc định từ Firebase
+    const currentDate = new Date();
+    const year = currentDate.getFullYear();
+    const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
+    const day = currentDate.getDate().toString().padStart(2, '0');
+
+    // Lấy phần mở rộng của file để xác định content type
+    const fileExt = path.extname(filename).toLowerCase();
+    let contentType = 'audio/mpeg'; // Mặc định là mp3
+    // Xác định content type dựa trên đuôi file
+    if (fileExt === '.wav') contentType = 'audio/wav';
+    else if (fileExt === '.ogg') contentType = 'audio/ogg';
+    else if (fileExt === '.aac') contentType = 'audio/aac';
+    else if (fileExt === '.flac') contentType = 'audio/flac';
+    // Tạo tên file duy nhất
+    const uniqueFilename = `tinder/audio/${year}/${month}/${day}/${filename}`;
+    const fileRef = bucket.file(uniqueFilename);
+
+    // Upload file lên Firebase
+    await fileRef.save(file, {
+      metadata: { contentType }, // Đặt kiểu file phù hợp
+    });
+    // Trả về URL audio
     return `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(uniqueFilename)}?alt=media`;
   }
 }

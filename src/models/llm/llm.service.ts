@@ -511,4 +511,35 @@ Chỉ trả về mảng JSON, không thêm bất kỳ văn bản nào khác.
 
     return combinedResults;
   }
+
+  async generateConversationStarters(user1: User, user2: User) {
+    // Use Gemini to generate conversation starters
+    const model = this.gemini.getGenerativeModel({
+      model: 'gemini-2.0-flash-exp',
+    });
+
+    const prompt = `
+  Tạo 3 gợi ý mở đầu cuộc trò chuyện sáng tạo và cá nhân hóa cho hai người sau:
+  
+  Người 1: 
+  - Sở thích: ${user1.interests?.join(', ') || 'Không rõ'}
+  - Giới thiệu: ${user1.rawProfile || 'Chưa có giới thiệu'}
+  
+  Người 2:
+  - Sở thích: ${user2.interests?.join(', ') || 'Không rõ'}
+  - Giới thiệu: ${user2.rawProfile || 'Chưa có giới thiệu'}
+  
+  Tập trung vào những sở thích chung hoặc những điểm bổ sung cho nhau giữa họ.
+  Chỉ trả về 3 gợi ý bắt đầu cuộc trò chuyện, mỗi gợi ý trên một dòng, không thêm bất kỳ văn bản nào khác.
+  `;
+
+    const response = await model.generateContent(prompt);
+    const suggestions = response.response
+      .text()
+      .split('\n')
+      .filter((line) => line.trim().length > 0)
+      .slice(0, 3);
+
+    return suggestions;
+  }
 }

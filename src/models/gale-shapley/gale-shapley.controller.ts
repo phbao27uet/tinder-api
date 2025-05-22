@@ -26,9 +26,8 @@ export class GaleShapleyController {
     );
   }
 
-  @Auth('USER')
-  @Post('run')
-  async run(@GetCurrentUserId() userId: string) {
+  @Post('run/:userId')
+  async run(@Param('userId') userId: string) {
     return this.galeShapleyService.run(userId);
   }
 

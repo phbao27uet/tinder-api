@@ -21,10 +21,21 @@ interface ConversationInfo {
 
 @Injectable()
 export class MessagesService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async sendMessage(dto: CreateMessageDto) {
-    return this.prisma.message.create({ data: dto });
+    return this.prisma.message.create({
+      data: {
+        senderId: dto.senderId,
+        receiverId: dto.receiverId,
+        matchId: dto.matchId,
+        timestamp: new Date(),
+        read: false,
+        imageUrl: dto.imageUrl,
+        content: dto.content || '',
+        messageType: dto.messageType || 'TEXT',
+      },
+    });
   }
 
   async getConversation(userId: string, otherUserId: string) {
@@ -207,8 +218,6 @@ export class MessagesService {
         },
       },
     });
-
-    console.log(newMessage);
 
     return newMessage;
   }

@@ -234,7 +234,7 @@ export class UserService {
     const { embeddings } = await this.llmService.processUserData({
       email: userUpdated.email,
       name: userUpdated.name as string,
-      birthday: userUpdated.birthday as Date,
+      birthday: userUpdated.birthday?.toString(),
       gender: userUpdated.gender as 'MALE' | 'FEMALE',
       password: userUpdated.password,
       languages: userUpdated.languages,
@@ -452,7 +452,7 @@ export class UserService {
     const sleepKeys = Object.keys(SLEEP_PATTERN);
 
     // Build 50 random users
-    for (let i = 5; i <= 50; i++) {
+    for (let i = 20; i <= 50; i++) {
       console.log(`Generated user ${i}`);
       const userData: SignUpDto = {
         email: '',
