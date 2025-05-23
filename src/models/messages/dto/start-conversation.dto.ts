@@ -2,8 +2,8 @@ import { z } from 'nestjs-zod/z';
 import { createZodDto } from 'nestjs-zod';
 
 const StartConversationSchema = z.object({
-  receiverId: z.string().uuid(),
-  matchId: z.string().uuid().optional(),
+  receiverId: z.string(),
+  matchId: z.string().optional(),
   content: z.string(),
 });
 

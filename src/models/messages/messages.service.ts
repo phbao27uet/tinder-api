@@ -181,8 +181,6 @@ export class MessagesService {
   }
 
   async startConversation(userId: string, dto: StartConversationDto) {
-    console.log(userId, dto);
-    // Kiểm tra người nhận có tồn tại không
     const receiver = await this.prisma.user.findUnique({
       where: { id: dto.receiverId },
     });
@@ -191,7 +189,6 @@ export class MessagesService {
       throw new NotFoundException('Người nhận không tồn tại');
     }
 
-    // Tạo tin nhắn đầu tiên
     const newMessage = await this.prisma.message.create({
       data: {
         senderId: userId,
