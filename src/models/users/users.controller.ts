@@ -17,7 +17,7 @@ import { UpdateLocationDto } from './dto/update-location.dto';
 
 @Controller('users')
 export class UserController {
-  constructor(private readonly userService: UserService) { }
+  constructor(private readonly userService: UserService) {}
 
   @Auth('ADMIN')
   @Get()
@@ -35,7 +35,7 @@ export class UserController {
   async profile(@GetCurrentUserId() id: string) {
     return this.userService.getProfile(id);
   }
-  
+
   @Auth('USER')
   @Get('matches')
   async matches(@GetCurrentUserId() id: string) {
@@ -60,6 +60,12 @@ export class UserController {
     return this.userService.getMatchHistory(userId);
   }
 
+  @Auth('USER')
+  @Get(':id')
+  async findOne(@Param('id') id: string) {
+    return this.userService.findOne(id);
+  }
+
   @Get(':id/matches')
   async getMatches(@Param('id') id: string) {
     return this.userService.findMatches(id);
@@ -69,7 +75,8 @@ export class UserController {
   @Patch('profile')
   async updateProfile(
     @GetCurrentUserId() id: string,
-    @Body() updateDto: UpdateUserDto) {
+    @Body() updateDto: UpdateUserDto,
+  ) {
     return this.userService.update(id, updateDto);
   }
 
@@ -77,7 +84,8 @@ export class UserController {
   @Patch('location')
   async updateLocation(
     @GetCurrentUserId() id: string,
-    @Body() updateDto: UpdateLocationDto) {
+    @Body() updateDto: UpdateLocationDto,
+  ) {
     return this.userService.updateLocation(id, updateDto);
   }
 

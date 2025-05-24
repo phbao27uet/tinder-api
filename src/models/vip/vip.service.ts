@@ -183,18 +183,20 @@ export class VipService {
   async getUserLikes(userId: string) {
     // Check if user has active VIP subscription
     const vipStatus = await this.getUserVipStatus(userId);
-    
+
     if (!vipStatus.isVip) {
-      throw new ForbiddenException('This feature is only available for VIP users');
+      throw new ForbiddenException(
+        'This feature is only available for VIP users',
+      );
     }
-    
+
     // Get users who liked the current user (RIGHT swipe)
     const likes = await this.prisma.swipe.findMany({
       where: {
         targetUserId: userId,
         direction: {
-          in: [Direction.RIGHT, Direction.UP]
-        }
+          in: [Direction.RIGHT, Direction.UP],
+        },
       },
       include: {
         swiper: {
@@ -212,36 +214,36 @@ export class VipService {
         createdAt: 'desc',
       },
     });
-    
-    return likes.map(like => ({
+
+    return likes.map((like) => ({
       liked_at: like.createdAt,
-      user: like.swiper
+      user: like.swiper,
+      direction: like.direction,
     }));
   }
 
   async getPopularProfiles(userId: string, limit: number = 10) {
     // Check if user has active VIP subscription
     const vipStatus = await this.getUserVipStatus(userId);
-    
+
     if (!vipStatus.isVip) {
-      throw new ForbiddenException('This feature is only available for VIP users');
+      throw new ForbiddenException(
+        'This feature is only available for VIP users',
+      );
     }
-    
+
     // Lấy top người dùng được quan tâm nhiều nhất
     const topUsers = await this.prisma.user.findMany({
       where: {
-        id: { not: userId }, 
+        id: { not: userId },
         likesCount: {
-          gte: 1
+          gte: 1,
         },
         superLikesCount: {
-          gte: 1
-        }
+          gte: 1,
+        },
       },
-      orderBy: [
-        { likesCount: 'desc' },
-        { superLikesCount: 'desc' }
-      ],
+      orderBy: [{ likesCount: 'desc' }, { superLikesCount: 'desc' }],
       take: limit,
       select: {
         id: true,
@@ -252,8 +254,8 @@ export class VipService {
         interests: true,
         rawProfile: true,
         likesCount: true,
-        superLikesCount: true
-      }
+        superLikesCount: true,
+      },
     });
 
     return topUsers;

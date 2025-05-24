@@ -67,8 +67,8 @@ export class PaymentService {
           },
         ],
         application_context: {
-          return_url: `https://lldttsmt-9981.asse.devtunnels.ms/payment/paypal-success?userId=${userId}&amount=${amount}`,
-          cancel_url: `https://lldttsmt-9981.asse.devtunnels.ms/payment/paypal-cancel?userId=${userId}`,
+          return_url: `${process.env.API_URL}/payment/paypal-success?userId=${userId}&amount=${amount}`,
+          cancel_url: `${process.env.API_URL}/payment/paypal-cancel?userId=${userId}`,
         },
       });
       const response = await this.paypalClient.execute(request);

@@ -6,7 +6,10 @@ import { PrismaService } from 'src/shared/prisma/prisma.service';
 import { ChangePasswordDto, UpdateUserDto } from './dto/update-user.dto';
 import { hashPassword } from '@shared/utils';
 import { IUserMatch, LlmService } from '@models/llm/llm.service';
-import { GaleShapleyService } from '@models/gale-shapley/gale-shapley.service';
+import {
+  GaleShapleyService,
+  UserSuggestion,
+} from '@models/gale-shapley/gale-shapley.service';
 import { UpdateLocationDto } from './dto/update-location.dto';
 import {
   DESCRIPTIONS,
@@ -35,7 +38,7 @@ export class UserService {
     private llmService: LlmService,
     private galeShapleyService: GaleShapleyService,
     private authService: AuthService,
-  ) { }
+  ) {}
 
   async findAll(defaultFindAllQuery: DefaultFindAllQueryDto) {
     const {
@@ -82,6 +85,44 @@ export class UserService {
         totalPages: Math.ceil((total ?? 0) / perPage),
       },
     };
+  }
+
+  async findOne(id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        id,
+      },
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    const userSuggestion: UserSuggestion = {
+      id: user.id,
+      name: user.name as string,
+      gender: user.gender as string,
+      images: user.images as string[],
+      similarityScore: 0, // Placeholder, will be calculated later
+      interests: user.interests as string[],
+      additionalInfo: {
+        zodiac: user.zodiac as string,
+        education: user.education as string,
+        lookingFor: user.lookingFor as string,
+        communicationStyle: user.communicationStyle as string,
+        loveLanguage: user.loveLanguage as string,
+        pet: user.pet as string,
+        alcoholConsumption: user.alcoholConsumption as string,
+        smoking: user.smoking as string,
+        exerciseHabit: user.exerciseHabit as string,
+        diet: user.diet as string,
+        socialMediaActivity: user.socialMediaActivity as string,
+        sleepHabit: user.sleepHabit as string,
+        rawProfile: user.rawProfile as string,
+      },
+    };
+
+    return userSuggestion;
   }
 
   async getBalance(id: string) {
@@ -335,7 +376,7 @@ export class UserService {
       },
     });
 
-    return subscriptionHistory.map(subscription => ({
+    return subscriptionHistory.map((subscription) => ({
       id: subscription.id,
       packageName: subscription.vipPackage.name,
       startDate: subscription.startDate,
@@ -343,7 +384,7 @@ export class UserService {
       isActive: subscription.isActive,
       paymentMethod: subscription.paymentMethod,
       price: subscription.vipPackage.price,
-      purchasedAt: subscription.createdAt
+      purchasedAt: subscription.createdAt,
     }));
   }
 
@@ -379,9 +420,9 @@ export class UserService {
       },
     });
 
-    return matches.map(match => {
+    return matches.map((match) => {
       // Find the other user in the match (not the current user)
-      const otherUser = match.users.find(user => user.id !== userId);
+      const otherUser = match.users.find((user) => user.id !== userId);
 
       return {
         id: match.id,
@@ -433,7 +474,8 @@ export class UserService {
     const hashedPassword = await hashPassword(baseSample.password);
 
     // Helper to pick a random item from an array
-    const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+    const pick = <T>(arr: T[]): T =>
+      arr[Math.floor(Math.random() * arr.length)];
 
     const genderKeys = Object.keys(GENDER);
     const interestKeys = Object.keys(INTERESTS);
@@ -463,8 +505,7 @@ export class UserService {
           'https://firebasestorage.googleapis.com/v0/b/file-storage-6ac01.appspot.com/o/tinder%2Fimages%2F2025%2F05%2F06%2FC5D7D47F-0E60-47BD-8F3B-39A79D8A6EB4.jpg?alt=media',
         ],
         rawProfile: '',
-      }
-
+      };
 
       const idx = i;
 
