@@ -548,6 +548,9 @@ export class GaleShapleyService {
         ) {
           return false;
         }
+      } else {
+        // Neu khong setting gioi tinh, thi loc theo gioi tinh cua potentialMatch
+        return user.gender !== potentialMatch.gender;
       }
 
       // Loc theo Bio
