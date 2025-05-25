@@ -489,6 +489,14 @@ export class GaleShapleyService {
         this.logger.log(
           `Đã tính toán và lưu preferences cho người dùng ${user.id}`,
         );
+
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: {
+            // Cập nhật trường lastIndexed để theo dõi thời gian cập nhật preferences
+            lastIndexed: new Date(),
+          },
+        });
       } catch (error) {
         this.logger.error(
           `Lỗi khi tính toán preferences cho người dùng ${user.id}:`,
@@ -707,8 +715,32 @@ export class GaleShapleyService {
 
     const swipedUserIds = swipedUsers.map((swipe) => swipe.targetUserId);
 
+    // Lấy tất cả người dùng để lọc theo preferredOrder
+    const allUsers = await this.prisma.user.findMany({
+      include: { preferences: true, searchSetting: true },
+      where: {
+        id: {
+          notIn: [userId, ...swipedUserIds],
+        },
+      },
+    });
+
+    const checkLastIndexed = allUsers.some(
+      (u) => user.lastIndexed && u.createdAt > user.lastIndexed,
+    );
+
+    if (checkLastIndexed) {
+      this.logger.log(
+        `Người dùng ${userId} có dữ liệu mới, cần tính toán lại preferences...`,
+      );
+    }
+
     // Nếu chưa có preferences, cần tính toán trước
-    if (!userPreference || userPreference.preferredOrder.length === 0) {
+    if (
+      !userPreference ||
+      userPreference.preferredOrder.length === 0 ||
+      checkLastIndexed
+    ) {
       this.logger.log(
         `Người dùng ${userId} chưa có preferences, tiến hành tính toán...`,
       );
@@ -747,16 +779,6 @@ export class GaleShapleyService {
         filteredUsers,
       );
     }
-
-    // Lấy tất cả người dùng để lọc theo preferredOrder
-    const allUsers = await this.prisma.user.findMany({
-      include: { preferences: true, searchSetting: true },
-      where: {
-        id: {
-          notIn: [userId, ...swipedUserIds],
-        },
-      },
-    });
 
     const filteredUsers = this.findPotentialMatches(user, allUsers);
     return this.getUserSuggestionsFromPreference(
